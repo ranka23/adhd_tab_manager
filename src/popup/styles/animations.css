@@ -1,0 +1,192 @@
+/**
+ * animations.css — CSS-only animations for the ADHD Tab Manager.
+ * All animations are gentle and calming, designed to:
+ * - Provide satisfying feedback without being overwhelming
+ * - Use smooth transitions instead of jarring effects
+ * - Celebrate small wins with subtle confetti-like effects
+ */
+
+/* ============================================================
+ * Card entrance animation — slides up + fades in
+ * Used when tabs, sessions, or other cards first appear.
+ * Each card gets a staggered delay for a cascading effect.
+ * ============================================================ */
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-enter {
+  animation: cardEnter 0.3s ease-out both;
+}
+
+/* ============================================================
+ * Pulse animation — gentle scale breathing effect
+ * Used for the focus mode icon and fire streak emoji.
+ * Creates a subtle "alive" feeling without being distracting.
+ * ============================================================ */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.pulse-animation {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ============================================================
+ * Fire pulse — more energetic pulse for streak indicators
+ * Adds a slight color shift for extra dopamine.
+ * ============================================================ */
+@keyframes firePulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.2);
+  }
+}
+
+.fire-pulse {
+  animation: firePulse 1.5s ease-in-out infinite;
+  display: inline-block;
+}
+
+/* ============================================================
+ * Fade in — simple opacity transition
+ * Used for panels that appear/disappear.
+ * ============================================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ============================================================
+ * Slide down — for dropdown menus and collapsible panels
+ * ============================================================ */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 500px;
+  }
+}
+
+.slide-down {
+  animation: slideDown 0.25s ease-out;
+  overflow: hidden;
+}
+
+/* ============================================================
+ * Scale out — for tab close animation
+ * Tab shrinks and fades when closed.
+ * ============================================================ */
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.scale-out {
+  animation: scaleOut 0.2s ease-in forwards;
+}
+
+/* ============================================================
+ * Shake — gentle horizontal shake for errors or warnings
+ * Not aggressive — just a subtle "hey, something's off"
+ * ============================================================ */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+.shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* ============================================================
+ * Timer ring glow — subtle glow effect when timer completes
+ * ============================================================ */
+@keyframes ringGlow {
+  0% {
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(25, 118, 210, 0.4));
+  }
+  100% {
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+.timer-glow {
+  animation: ringGlow 2s ease-in-out;
+}
+
+/* ============================================================
+ * Celebration — subtle celebration animation
+ * A gentle bounce + scale for when achievements are unlocked
+ * ============================================================ */
+@keyframes celebrate {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.15);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.celebrate {
+  animation: celebrate 0.5s ease-out;
+}
+
+/* ============================================================
+ * Smooth transition utility class
+ * Generic transition for interactive elements
+ * ============================================================ */
+.smooth-transition {
+  transition: all 0.2s ease-in-out;
+}

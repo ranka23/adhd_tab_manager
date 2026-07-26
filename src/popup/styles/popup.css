@@ -1,0 +1,386 @@
+/**
+ * popup.css — Main stylesheet for the ADHD Tab Manager popup.
+ * Sets up the foundation:
+ * - Roboto font (Material Design standard)
+ * - Global reset and base styles
+ * - Layout structure
+ * - MUI-inspired button styles
+ * - Utility classes
+ *
+ * Color palette:
+ * - Primary: #1976d2 (calm blue)
+ * - Secondary: #81c784 (muted green)
+ * - Background: #f5f5f5 (warm neutral)
+ * - Surface: #ffffff (clean white)
+ */
+
+/* ============================================================
+ * IMPORTS
+ * ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap');
+
+/* ============================================================
+ * CSS RESET & BASE STYLES
+ * ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: #212121;
+  background: #f5f5f5;
+  line-height: 1.5;
+  /* Fixed width for the popup — matches Chrome extension popup sizing */
+  width: 400px;
+  min-height: 300px;
+  max-height: 580px;
+  overflow-y: auto;
+}
+
+/* Scrollbar styling for the whole popup */
+body::-webkit-scrollbar {
+  width: 6px;
+}
+
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 3px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+  background: #bdbdbd;
+}
+
+/* ============================================================
+ * LAYOUT
+ * ============================================================ */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Main content area between header and footer */
+.popup-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+ * SECTION — Vertical sections within the popup
+ * ============================================================ */
+.section {
+  background: #ffffff;
+  border-radius: 12px;
+  margin: 8px 12px;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.section--elevated {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.section__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #424242;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section__title-icon {
+  font-size: 16px;
+}
+
+/* ============================================================
+ * TABS — Navigation tabs within the popup
+ * ============================================================ */
+.nav-tabs {
+  display: flex;
+  border-bottom: 2px solid #f0f0f0;
+  padding: 0 12px;
+  background: #ffffff;
+  position: sticky;
+  top: 53px; /* Below the header */
+  z-index: 99;
+}
+
+.nav-tab {
+  flex: 1;
+  padding: 10px 8px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9e9e9e;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.nav-tab:hover {
+  color: #616161;
+  background: #fafafa;
+}
+
+.nav-tab--active {
+  color: #1976d2;
+  border-bottom-color: #1976d2;
+}
+
+.nav-tab__icon {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+/* ============================================================
+ * BUTTONS — Material Design-inspired button system
+ * ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary button — solid blue */
+.btn--primary {
+  background: #1976d2;
+  color: white;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #1565c0;
+  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.3);
+}
+
+.btn--primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Secondary button — outlined style */
+.btn--secondary {
+  background: transparent;
+  color: #1976d2;
+  border: 1px solid #1976d2;
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: #e3f2fd;
+}
+
+/* Text button — minimal, for secondary actions */
+.btn--text {
+  background: transparent;
+  color: #757575;
+  padding: 4px 8px;
+}
+
+.btn--text:hover:not(:disabled) {
+  color: #1976d2;
+  background: #f5f5f5;
+}
+
+/* Danger button — muted red for destructive actions */
+.btn--danger {
+  background: #e57373;
+  color: white;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #ef5350;
+}
+
+/* Size variants */
+.btn--large {
+  padding: 12px 32px;
+  font-size: 16px;
+  border-radius: 12px;
+}
+
+.btn--small {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+ * CARD — Generic card container
+ * ============================================================ */
+.card {
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  padding: 12px;
+  transition: all 0.15s ease;
+}
+
+.card:hover {
+  border-color: #e0e0e0;
+}
+
+.card--elevated {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================================
+ * INPUT — Text input styling
+ * ============================================================ */
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #212121;
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
+}
+
+.input::placeholder {
+  color: #bdbdbd;
+}
+
+/* ============================================================
+ * DIVIDER — Horizontal line separator
+ * ============================================================ */
+.divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 0;
+}
+
+/* ============================================================
+ * EMPTY STATE — Shown when no data is available
+ * ============================================================ */
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.empty-state__icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.empty-state__text {
+  font-size: 14px;
+  color: #9e9e9e;
+  line-height: 1.5;
+}
+
+/* ============================================================
+ * LOADING — Simple loading spinner
+ * ============================================================ */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.loading__spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+ * UTILITIES
+ * ============================================================ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: #9e9e9e;
+}
+
+.mt-1 {
+  margin-top: 8px;
+}
+
+.mt-2 {
+  margin-top: 16px;
+}
+
+.mb-1 {
+  margin-bottom: 8px;
+}
+
+.mb-2 {
+  margin-bottom: 16px;
+}

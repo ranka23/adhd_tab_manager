@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "ADHD Tab Manager",
+  "version": "1.0.0",
+  "description": "A Chrome Extension designed specifically for ADHD brains — minimal clutter, one-action-at-a-time, dopamine-friendly tab management",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "public/icons/icon16.png",
+      "48": "public/icons/icon48.png",
+      "128": "public/icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "public/icons/icon16.png",
+    "48": "public/icons/icon48.png",
+    "128": "public/icons/icon128.png"
+  }
+}

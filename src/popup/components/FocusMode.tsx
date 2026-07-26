@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import type { FocusModeState } from '../types';
+
 
 /** Props for the FocusMode component */
 interface FocusModeProps {

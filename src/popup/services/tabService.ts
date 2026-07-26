@@ -5,7 +5,7 @@
  */
 
 import type { TabInfo, TabSession, ClosedTabRecord } from '../types';
-import { chromeTabToTabInfo, generateId, createSession } from '../utils/helpers';
+import { chromeTabToTabInfo, createSession } from '../utils/helpers';
 import { STORAGE_KEYS, MAX_CLOSED_TABS_HISTORY } from '../../shared/constants';
 
 /**

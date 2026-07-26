@@ -4,9 +4,8 @@
  * and provides undo functionality and daily summaries.
  */
 
-import type { TabInfo, DailyStats, ClosedTabRecord } from '../types';
-import { STORAGE_KEYS, AUTO_SAVE_INTERVAL_MINUTES } from '../../shared/constants';
-import { createDefaultDailyStats } from '../utils/helpers';
+import type { TabInfo, DailyStats } from '../types';
+import { STORAGE_KEYS } from '../../shared/constants';
 
 /**
  * Auto-saves the current tabs to storage.

@@ -12,7 +12,7 @@
 
 import React, { useState } from 'react';
 import type { TabSession } from '../types';
-import { formatDate, minutesAgo } from '../utils/helpers';
+import { formatDate } from '../utils/helpers';
 import { SESSION_ICONS, SESSION_NAME_SUGGESTIONS } from '../utils/constants';
 
 /** Props for the SessionSaver component */
@@ -22,7 +22,7 @@ interface SessionSaverProps {
   /** Number of currently open tabs (for the save button) */
   openTabCount: number;
   /** Callback to save a new session */
-  onSave: (name: string, icon: string) => Promise<void>;
+  onSave: (name: string, icon: string) => Promise<TabSession>;
   /** Callback to restore a session */
   onRestore: (sessionId: string) => Promise<void>;
   /** Callback to delete a session */

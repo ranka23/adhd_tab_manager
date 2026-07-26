@@ -34,7 +34,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   pinnedCount,
   onUndoClose,
   onCloseAll,
-  isFocusMode,
 }) => {
   /** Whether to show the "close all" confirmation */
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);

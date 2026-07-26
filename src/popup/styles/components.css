@@ -993,3 +993,77 @@
   font-weight: 500;
   margin-bottom: 8px;
 }
+
+/* ============================================================
+ * END OF DAY SUMMARY
+ * ============================================================ */
+.end-of-day {
+  padding: 20px;
+  text-align: center;
+}
+
+.end-of-day__header {
+  margin-bottom: 16px;
+}
+
+.end-of-day__icon {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.end-of-day__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #212121;
+  margin: 0;
+}
+
+.end-of-day__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.end-of-day__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  background: #f8fbff;
+  border-radius: 10px;
+}
+
+.end-of-day__stat--primary {
+  background: #e3f2fd;
+}
+
+.end-of-day__stat--highlight {
+  background: #fff3e0;
+}
+
+.end-of-day__stat-icon {
+  font-size: 24px;
+}
+
+.end-of-day__stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #212121;
+}
+
+.end-of-day__stat-label {
+  font-size: 11px;
+  color: #9e9e9e;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.end-of-day__message {
+  font-size: 14px;
+  color: #616161;
+  margin: 16px 0;
+  line-height: 1.5;
+}

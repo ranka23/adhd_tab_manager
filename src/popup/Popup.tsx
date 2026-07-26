@@ -147,7 +147,7 @@ export const Popup: React.FC = () => {
   }, [focusMode.isActive, activeTab]);
 
   return (
-    <div className="popup-root">
+    <div className="popup-root" data-testid="adhd-tab-manager">
       {/* Header with focus mode toggle */}
       <Header
         isFocusMode={focusMode.isActive}

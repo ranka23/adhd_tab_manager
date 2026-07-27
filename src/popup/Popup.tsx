@@ -21,6 +21,7 @@ import { useTimer } from './hooks/useTimer';
 import { useSessions } from './hooks/useSessions';
 import { useBlockedSites } from './hooks/useBlockedSites';
 import * as sessionService from './services/sessionService';
+import { EndOfDaySummary } from './components/EndOfDaySummary';
 import type { FocusModeState, DailyStats } from './types';
 import { STORAGE_KEYS } from '../shared/constants';
 
@@ -42,6 +43,9 @@ export const Popup: React.FC = () => {
     startedAt: null,
     savedTabIds: [],
   });
+
+  /** Whether to show the end-of-day summary */
+  const [showSummary, setShowSummary] = useState(false);
 
   /** Daily stats for the motivation section */
   const [dailyStats, setDailyStats] = useState<DailyStats>({
@@ -129,6 +133,10 @@ export const Popup: React.FC = () => {
     // Reload stats
     const stats = await sessionService.getDailyStats();
     setDailyStats(stats);
+
+    // Show summary after ending focus
+    setShowSummary(true);
+    setTimeout(() => setShowSummary(false), 10000);
   }, [focusMode.startedAt, blockedSites]);
 
   /** Handles closing all non-pinned tabs */
@@ -138,6 +146,11 @@ export const Popup: React.FC = () => {
       await tabs.closeTab(tab.id);
     }
   }, [tabs]);
+
+  // Load daily stats on mount
+  useEffect(() => {
+    sessionService.getDailyStats().then(setDailyStats);
+  }, []);
 
   // If focus mode is active and we're not on the home tab, switch to home
   useEffect(() => {
@@ -210,6 +223,14 @@ export const Popup: React.FC = () => {
             {/* Tab content panels */}
             {activeTab === 'home' && (
               <div className="tab-panel">
+                {showSummary && (
+                  <div className="section">
+                    <EndOfDaySummary
+                      stats={dailyStats}
+                      onDismiss={() => setShowSummary(false)}
+                    />
+                  </div>
+                )}
                 <div className="section">
                   <DailyQuote stats={dailyStats} />
                 </div>

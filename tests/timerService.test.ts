@@ -115,7 +115,8 @@ describe('Timer Service', () => {
 
     it('should resume a paused timer', async () => {
       // Arrange
-      const { startWorkPhase, pauseTimer, resumeTimer } = await import('../src/popup/services/timerService');
+      const { startWorkPhase, pauseTimer, resumeTimer } =
+        await import('../src/popup/services/timerService');
       await startWorkPhase();
       await pauseTimer();
 

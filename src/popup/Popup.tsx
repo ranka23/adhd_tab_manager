@@ -80,7 +80,7 @@ export const Popup: React.FC = () => {
 
   // Load state on mount
   useEffect(() => {
-    loadState();
+    void loadState();
   }, [loadState]);
 
   /** Handles starting focus mode */
@@ -147,7 +147,7 @@ export const Popup: React.FC = () => {
 
   // Load daily stats on mount
   useEffect(() => {
-    sessionService.getDailyStats().then(setDailyStats);
+    void sessionService.getDailyStats().then(setDailyStats);
   }, []);
 
   // If focus mode is active and we're not on the home tab, switch to home

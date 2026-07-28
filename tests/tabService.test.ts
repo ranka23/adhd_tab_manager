@@ -39,8 +39,24 @@ describe('Tab Service', () => {
     it('should filter out tabs without URLs', async () => {
       // Arrange
       mocks.tabs.query.mockResolvedValueOnce([
-        { id: 1, url: 'https://example.com', title: 'Example', active: false, pinned: false, windowId: 1, index: 0 },
-        { id: 2, url: undefined, title: 'Chrome', active: false, pinned: false, windowId: 1, index: 1 },
+        {
+          id: 1,
+          url: 'https://example.com',
+          title: 'Example',
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+        {
+          id: 2,
+          url: undefined,
+          title: 'Chrome',
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 1,
+        },
       ] as unknown as chrome.tabs.Tab[]);
 
       // Act
@@ -55,7 +71,15 @@ describe('Tab Service', () => {
     it('should filter out tabs without IDs', async () => {
       // Arrange
       mocks.tabs.query.mockResolvedValueOnce([
-        { id: undefined, url: 'https://example.com', title: 'No ID', active: false, pinned: false, windowId: 1, index: 0 },
+        {
+          id: undefined,
+          url: 'https://example.com',
+          title: 'No ID',
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
       ] as unknown as chrome.tabs.Tab[]);
 
       // Act
@@ -72,7 +96,16 @@ describe('Tab Service', () => {
       // Arrange
       const { saveSession, getSessions } = await import('../src/popup/services/tabService');
       const mockTabs = [
-        { id: 1, url: 'https://example.com', title: 'Example', favIconUrl: undefined, active: true, pinned: false, windowId: 1, index: 0 },
+        {
+          id: 1,
+          url: 'https://example.com',
+          title: 'Example',
+          favIconUrl: undefined,
+          active: true,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
       ];
 
       // Act
@@ -93,7 +126,18 @@ describe('Tab Service', () => {
     it('should save multiple sessions', async () => {
       // Arrange
       const { saveSession, getSessions } = await import('../src/popup/services/tabService');
-      const mockTabs = [{ id: 1, url: 'https://a.com', title: 'A', favIconUrl: undefined, active: false, pinned: false, windowId: 1, index: 0 }];
+      const mockTabs = [
+        {
+          id: 1,
+          url: 'https://a.com',
+          title: 'A',
+          favIconUrl: undefined,
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+      ];
 
       // Act
       await saveSession('Session 1', mockTabs);
@@ -111,8 +155,20 @@ describe('Tab Service', () => {
   describe('deleteSession', () => {
     it('should delete a session by ID', async () => {
       // Arrange
-      const { saveSession, deleteSession, getSessions } = await import('../src/popup/services/tabService');
-      const mockTabs = [{ id: 1, url: 'https://a.com', title: 'A', favIconUrl: undefined, active: false, pinned: false, windowId: 1, index: 0 }];
+      const { saveSession, deleteSession, getSessions } =
+        await import('../src/popup/services/tabService');
+      const mockTabs = [
+        {
+          id: 1,
+          url: 'https://a.com',
+          title: 'A',
+          favIconUrl: undefined,
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+      ];
       const session = await saveSession('To Delete', mockTabs);
 
       // Act
@@ -139,8 +195,20 @@ describe('Tab Service', () => {
   describe('renameSession', () => {
     it('should rename an existing session', async () => {
       // Arrange
-      const { saveSession, renameSession, getSessions } = await import('../src/popup/services/tabService');
-      const mockTabs = [{ id: 1, url: 'https://a.com', title: 'A', favIconUrl: undefined, active: false, pinned: false, windowId: 1, index: 0 }];
+      const { saveSession, renameSession, getSessions } =
+        await import('../src/popup/services/tabService');
+      const mockTabs = [
+        {
+          id: 1,
+          url: 'https://a.com',
+          title: 'A',
+          favIconUrl: undefined,
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+      ];
       const session = await saveSession('Old Name', mockTabs);
 
       // Act
@@ -156,7 +224,8 @@ describe('Tab Service', () => {
   describe('closeTab and restoreLastClosedTab', () => {
     it('should record closed tab and restore it', async () => {
       // Arrange
-      const { closeTab, restoreLastClosedTab, getClosedTabs } = await import('../src/popup/services/tabService');
+      const { closeTab, restoreLastClosedTab, getClosedTabs } =
+        await import('../src/popup/services/tabService');
 
       // Act - close a tab
       await closeTab(42);

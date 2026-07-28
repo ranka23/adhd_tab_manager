@@ -15,11 +15,19 @@ describe('Session Service', () => {
   describe('autoSaveTabs', () => {
     it('should save tabs to storage', async () => {
       // Arrange
-      const { autoSaveTabs, getAutoSaveHistory } = await import(
-        '../src/popup/services/sessionService'
-      );
+      const { autoSaveTabs, getAutoSaveHistory } =
+        await import('../src/popup/services/sessionService');
       const mockTabs = [
-        { id: 1, url: 'https://a.com', title: 'A', favIconUrl: undefined, active: true, pinned: false, windowId: 1, index: 0 },
+        {
+          id: 1,
+          url: 'https://a.com',
+          title: 'A',
+          favIconUrl: undefined,
+          active: true,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
       ];
 
       // Act
@@ -34,11 +42,32 @@ describe('Session Service', () => {
 
     it('should maintain rolling history of auto-saves', async () => {
       // Arrange
-      const { autoSaveTabs, getAutoSaveHistory } = await import(
-        '../src/popup/services/sessionService'
-      );
-      const tab1 = [{ id: 1, url: 'https://a.com', title: 'A', favIconUrl: undefined, active: false, pinned: false, windowId: 1, index: 0 }];
-      const tab2 = [{ id: 2, url: 'https://b.com', title: 'B', favIconUrl: undefined, active: false, pinned: false, windowId: 1, index: 0 }];
+      const { autoSaveTabs, getAutoSaveHistory } =
+        await import('../src/popup/services/sessionService');
+      const tab1 = [
+        {
+          id: 1,
+          url: 'https://a.com',
+          title: 'A',
+          favIconUrl: undefined,
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+      ];
+      const tab2 = [
+        {
+          id: 2,
+          url: 'https://b.com',
+          title: 'B',
+          favIconUrl: undefined,
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+      ];
 
       // Act
       await autoSaveTabs(tab1);
@@ -53,9 +82,8 @@ describe('Session Service', () => {
   describe('addFocusMinutes', () => {
     it('should add focus minutes to the total', async () => {
       // Act
-      const { addFocusMinutes, getFocusMinutesToday } = await import(
-        '../src/popup/services/sessionService'
-      );
+      const { addFocusMinutes, getFocusMinutesToday } =
+        await import('../src/popup/services/sessionService');
       const total = await addFocusMinutes(30);
 
       // Assert
@@ -99,9 +127,8 @@ describe('Session Service', () => {
 
     it('should aggregate stats from storage', async () => {
       // Arrange
-      const { addFocusMinutes, incrementDistractionsBlocked } = await import(
-        '../src/popup/services/sessionService'
-      );
+      const { addFocusMinutes, incrementDistractionsBlocked } =
+        await import('../src/popup/services/sessionService');
       await addFocusMinutes(45);
       await incrementDistractionsBlocked();
       await incrementDistractionsBlocked();

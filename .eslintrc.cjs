@@ -10,6 +10,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
+    project: ['./tsconfig.eslint.json'],
     ecmaFeatures: {
       jsx: true,
     },
@@ -26,7 +27,7 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'warn',
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
-    'no-console': ['warn', { allow: ['warn', 'error', 'info'] }]
+    'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
   },
-  ignorePatterns: ['dist', 'node_modules'],
+  ignorePatterns: ['dist', 'node_modules', '.eslintrc.cjs'],
 };

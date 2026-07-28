@@ -26,7 +26,7 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'warn',
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
-    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'no-console': ['warn', { allow: ['warn', 'error', 'info'] }]
   },
   ignorePatterns: ['dist', 'node_modules'],
 };

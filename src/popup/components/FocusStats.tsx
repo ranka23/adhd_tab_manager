@@ -33,7 +33,7 @@ export const FocusStats: React.FC<FocusStatsProps> = ({ startedAt, tabCount }) =
 
     updateElapsed();
     const interval = setInterval(updateElapsed, 30000);
-    return () => clearInterval(interval);
+    return (): void => clearInterval(interval);
   }, [startedAt]);
 
   /** Get a progress-based message */

@@ -55,7 +55,7 @@ export function useTimer(): UseTimerReturn {
 
   /** Loads initial state from storage */
   useEffect(() => {
-    const init = async () => {
+    const init = async (): Promise<void> => {
       const [timerState, timerSettings, stats] = await Promise.all([
         timerService.getTimerState(),
         timerService.getTimerSettings(),
@@ -96,12 +96,13 @@ export function useTimer(): UseTimerReturn {
       }, 1000);
     }
 
-    return () => {
+    return (): void => {
       if (tickRef.current) {
         clearInterval(tickRef.current);
         tickRef.current = null;
       }
     };
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [state.isRunning, state.phase, state.remainingSeconds]);
 
   /** Starts a new work phase */

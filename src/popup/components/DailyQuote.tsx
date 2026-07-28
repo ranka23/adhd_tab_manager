@@ -35,7 +35,7 @@ export const DailyQuote: React.FC<DailyQuoteProps> = ({ stats }) => {
     const interval = setInterval(() => {
       setQuoteIndex((prev) => (prev + 1) % MOTIVATIONAL_QUOTES.length);
     }, 30000);
-    return () => clearInterval(interval);
+    return (): void => clearInterval(interval);
   }, []);
 
   /** Calculate total focus time in hours and minutes */

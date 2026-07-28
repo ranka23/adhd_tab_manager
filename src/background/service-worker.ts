@@ -354,4 +354,4 @@ chrome.runtime.onMessage.addListener(
  * Log when the service worker starts up.
  * This helps with debugging extension lifecycle issues.
  */
-console.log('ADHD Tab Manager background service worker started');
+console.info('ADHD Tab Manager background service worker started');

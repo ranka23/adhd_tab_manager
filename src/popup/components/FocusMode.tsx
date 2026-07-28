@@ -50,7 +50,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({ isActive, startedAt, onSta
 
     // Set interval for ongoing updates
     const interval = setInterval(updateElapsed, 1000);
-    return () => clearInterval(interval);
+    return (): void => clearInterval(interval);
   }, [isActive, startedAt]);
 
   /** Formats elapsed seconds into HH:MM:SS */

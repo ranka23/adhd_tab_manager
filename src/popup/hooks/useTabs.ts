@@ -136,7 +136,7 @@ export function useTabs(): UseTabsReturn {
 
   // Load tabs and sessions on mount
   useEffect(() => {
-    const init = async () => {
+    const init = async (): Promise<void> => {
       setIsLoading(true);
       await Promise.all([refreshTabs(), refreshSessions()]);
       setIsLoading(false);

@@ -115,7 +115,7 @@ export async function getDistractionsBlockedToday(): Promise<number> {
 export async function getDailyStats(): Promise<DailyStats> {
   const [focusMinutes, pomodoroStats, distractionsBlocked] = await Promise.all([
     getFocusMinutesToday(),
-    (async () => {
+    (async (): Promise<{ count: number; streak: number }> => {
       const result = await chrome.storage.local.get([
         STORAGE_KEYS.TODAY_POMODOROS,
         STORAGE_KEYS.POMODORO_STREAK,

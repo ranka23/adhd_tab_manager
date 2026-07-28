@@ -57,12 +57,9 @@ export function useSessions(): UseSessionsReturn {
   );
 
   /** Restores a session by opening all its saved tabs */
-  const restore = useCallback(
-    async (sessionId: string) => {
-      await tabService.restoreSession(sessionId);
-    },
-    [],
-  );
+  const restore = useCallback(async (sessionId: string) => {
+    await tabService.restoreSession(sessionId);
+  }, []);
 
   /** Deletes a session */
   const remove = useCallback(

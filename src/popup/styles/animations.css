@@ -32,7 +32,8 @@
  * Creates a subtle "alive" feeling without being distracting.
  * ============================================================ */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -49,7 +50,8 @@
  * Adds a slight color shift for extra dopamine.
  * ============================================================ */
 @keyframes firePulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     filter: brightness(1);
   }
@@ -126,7 +128,8 @@
  * Not aggressive — just a subtle "hey, something's off"
  * ============================================================ */
 @keyframes shake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
   25% {

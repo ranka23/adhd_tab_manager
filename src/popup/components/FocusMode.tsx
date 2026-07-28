@@ -11,7 +11,6 @@
 
 import React, { useState, useEffect } from 'react';
 
-
 /** Props for the FocusMode component */
 interface FocusModeProps {
   /** Whether focus mode is currently active */
@@ -29,12 +28,7 @@ interface FocusModeProps {
  * When active, shows a calming, distraction-free screen.
  * When inactive, shows a single "Start Focus" button.
  */
-export const FocusMode: React.FC<FocusModeProps> = ({
-  isActive,
-  startedAt,
-  onStart,
-  onEnd,
-}) => {
+export const FocusMode: React.FC<FocusModeProps> = ({ isActive, startedAt, onStart, onEnd }) => {
   /** Elapsed time in seconds since focus mode started */
   const [elapsed, setElapsed] = useState(0);
 
@@ -96,7 +90,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
               : elapsed < 1800
                 ? 'Great work, keep going!'
                 : elapsed < 3600
-                  ? 'You\'re in the zone! 🌟'
+                  ? "You're in the zone! 🌟"
                   : 'Incredible focus session! 🔥'}
           </p>
         </div>

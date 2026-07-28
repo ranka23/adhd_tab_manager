@@ -69,9 +69,7 @@ export const Popup: React.FC = () => {
       STORAGE_KEYS.FOCUS_SAVED_TABS,
     ]);
 
-    const storedFocus = result[STORAGE_KEYS.FOCUS_MODE] as
-      | FocusModeState
-      | undefined;
+    const storedFocus = result[STORAGE_KEYS.FOCUS_MODE] as FocusModeState | undefined;
     if (storedFocus) {
       setFocusMode(storedFocus);
     }
@@ -164,9 +162,7 @@ export const Popup: React.FC = () => {
       {/* Header with focus mode toggle */}
       <Header
         isFocusMode={focusMode.isActive}
-        onToggleFocus={
-          focusMode.isActive ? handleEndFocus : handleStartFocus
-        }
+        onToggleFocus={focusMode.isActive ? handleEndFocus : handleStartFocus}
       />
 
       {/* Main content */}
@@ -225,10 +221,7 @@ export const Popup: React.FC = () => {
               <div className="tab-panel">
                 {showSummary && (
                   <div className="section">
-                    <EndOfDaySummary
-                      stats={dailyStats}
-                      onDismiss={() => setShowSummary(false)}
-                    />
+                    <EndOfDaySummary stats={dailyStats} onDismiss={() => setShowSummary(false)} />
                   </div>
                 )}
                 <div className="section">
@@ -256,10 +249,7 @@ export const Popup: React.FC = () => {
 
             {activeTab === 'tabs' && (
               <div className="tab-panel">
-                <TabGroup
-                  tabs={tabs.tabs}
-                  onCloseTab={tabs.closeTab}
-                />
+                <TabGroup tabs={tabs.tabs} onCloseTab={tabs.closeTab} />
               </div>
             )}
 

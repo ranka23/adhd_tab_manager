@@ -35,12 +35,8 @@ export const Header: React.FC<HeaderProps> = ({ isFocusMode, onToggleFocus }) =>
         onClick={onToggleFocus}
         aria-label={isFocusMode ? 'End focus mode' : 'Start focus mode'}
       >
-        <span className="focus-toggle-icon">
-          {isFocusMode ? '🎯' : '🧘'}
-        </span>
-        <span className="focus-toggle-label">
-          {isFocusMode ? 'Focusing' : 'Focus'}
-        </span>
+        <span className="focus-toggle-icon">{isFocusMode ? '🎯' : '🧘'}</span>
+        <span className="focus-toggle-label">{isFocusMode ? 'Focusing' : 'Focus'}</span>
       </button>
     </header>
   );

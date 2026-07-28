@@ -31,12 +31,14 @@ export async function saveTimerState(state: TimerState): Promise<void> {
 export async function getTimerSettings(): Promise<TimerSettings> {
   const result = await chrome.storage.local.get(STORAGE_KEYS.TIMER_SETTINGS);
   const stored = result[STORAGE_KEYS.TIMER_SETTINGS] as TimerSettings | undefined;
-  return stored ?? {
-    workMinutes: DEFAULT_TIMER.WORK_MINUTES,
-    shortBreakMinutes: DEFAULT_TIMER.SHORT_BREAK_MINUTES,
-    longBreakMinutes: DEFAULT_TIMER.LONG_BREAK_MINUTES,
-    pomodorosBeforeLongBreak: DEFAULT_TIMER.POMODOROS_BEFORE_LONG_BREAK,
-  };
+  return (
+    stored ?? {
+      workMinutes: DEFAULT_TIMER.WORK_MINUTES,
+      shortBreakMinutes: DEFAULT_TIMER.SHORT_BREAK_MINUTES,
+      longBreakMinutes: DEFAULT_TIMER.LONG_BREAK_MINUTES,
+      pomodorosBeforeLongBreak: DEFAULT_TIMER.POMODOROS_BEFORE_LONG_BREAK,
+    }
+  );
 }
 
 /**
@@ -81,9 +83,7 @@ export async function transitionToNextPhase(currentState: TimerState): Promise<T
     const isLongBreak =
       newCycleCount > 0 && newCycleCount % settings.pomodorosBeforeLongBreak === 0;
 
-    const breakMinutes = isLongBreak
-      ? settings.longBreakMinutes
-      : settings.shortBreakMinutes;
+    const breakMinutes = isLongBreak ? settings.longBreakMinutes : settings.shortBreakMinutes;
     const breakPhase: TimerPhase = isLongBreak ? 'longBreak' : 'shortBreak';
     const totalSeconds = breakMinutes * 60;
 
@@ -191,10 +191,8 @@ export async function recordPomodoroComplete(): Promise<{ count: number; streak:
     STORAGE_KEYS.POMODORO_STREAK,
   ]);
 
-  const currentCount =
-    (result[STORAGE_KEYS.TODAY_POMODOROS] as number | undefined) ?? 0;
-  const currentStreak =
-    (result[STORAGE_KEYS.POMODORO_STREAK] as number | undefined) ?? 0;
+  const currentCount = (result[STORAGE_KEYS.TODAY_POMODOROS] as number | undefined) ?? 0;
+  const currentStreak = (result[STORAGE_KEYS.POMODORO_STREAK] as number | undefined) ?? 0;
 
   const newCount = currentCount + 1;
   const newStreak = currentStreak + 1;

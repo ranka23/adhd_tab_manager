@@ -67,9 +67,7 @@ export const DistractionBlocker: React.FC<DistractionBlockerProps> = ({
               isActive ? 'distraction-blocker__dot--active' : ''
             }`}
           />
-          <span className="distraction-blocker__label">
-            Blocker {isActive ? 'Active' : 'Off'}
-          </span>
+          <span className="distraction-blocker__label">Blocker {isActive ? 'Active' : 'Off'}</span>
         </div>
 
         {/* Toggle switch */}
@@ -139,9 +137,7 @@ export const DistractionBlocker: React.FC<DistractionBlockerProps> = ({
             className="btn btn--text btn--small"
             onClick={() => setShowFullList(!showFullList)}
           >
-            {showFullList
-              ? 'Show less'
-              : `Show all ${sites.length} sites`}
+            {showFullList ? 'Show less' : `Show all ${sites.length} sites`}
           </button>
         )}
       </div>

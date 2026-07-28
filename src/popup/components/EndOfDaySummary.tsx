@@ -33,9 +33,7 @@ export const EndOfDaySummary: React.FC<EndOfDaySummaryProps> = ({ stats, onDismi
 
   /** Calculate total achievements */
   const totalAchievements =
-    stats.pomodorosCompleted +
-    Math.floor(stats.focusMinutes / 15) +
-    stats.distractionsBlocked;
+    stats.pomodorosCompleted + Math.floor(stats.focusMinutes / 15) + stats.distractionsBlocked;
 
   return (
     <div className="end-of-day card-enter">

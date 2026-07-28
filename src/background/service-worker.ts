@@ -57,8 +57,14 @@ function setupAlarms(): void {
 async function initializeDefaults(): Promise<void> {
   // Set up default blocked sites
   const DEFAULT_SITES = [
-    'reddit.com', 'twitter.com', 'x.com', 'facebook.com',
-    'instagram.com', 'tiktok.com', 'youtube.com', 'netflix.com',
+    'reddit.com',
+    'twitter.com',
+    'x.com',
+    'facebook.com',
+    'instagram.com',
+    'tiktok.com',
+    'youtube.com',
+    'netflix.com',
   ];
 
   const now = Date.now();
@@ -158,13 +164,15 @@ async function handleAutoSave(): Promise<void> {
 async function handlePomodoroTick(): Promise<void> {
   try {
     const result = await chrome.storage.local.get(STORAGE_KEYS.ACTIVE_TIMER);
-    const timerState = result[STORAGE_KEYS.ACTIVE_TIMER] as {
-      phase: string;
-      isRunning: boolean;
-      remainingSeconds: number;
-      totalSeconds: number;
-      completedInCycle: number;
-    } | undefined;
+    const timerState = result[STORAGE_KEYS.ACTIVE_TIMER] as
+      | {
+          phase: string;
+          isRunning: boolean;
+          remainingSeconds: number;
+          totalSeconds: number;
+          completedInCycle: number;
+        }
+      | undefined;
 
     if (!timerState || !timerState.isRunning || timerState.remainingSeconds <= 0) {
       return;
@@ -184,8 +192,7 @@ async function handlePomodoroTick(): Promise<void> {
 
     // If timer completed, send a notification
     if (newRemaining <= 0) {
-      const phaseLabel =
-        timerState.phase === 'work' ? 'Focus session' : 'Break';
+      const phaseLabel = timerState.phase === 'work' ? 'Focus session' : 'Break';
       chrome.notifications.create({
         type: 'basic',
         iconUrl: 'public/icons/icon128.png',
@@ -232,8 +239,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
   // Increment the distractions blocked counter
   const statsResult = await chrome.storage.local.get(STORAGE_KEYS.DISTRACTIONS_BLOCKED);
-  const currentCount =
-    (statsResult[STORAGE_KEYS.DISTRACTIONS_BLOCKED] as number | undefined) ?? 0;
+  const currentCount = (statsResult[STORAGE_KEYS.DISTRACTIONS_BLOCKED] as number | undefined) ?? 0;
   await chrome.storage.local.set({
     [STORAGE_KEYS.DISTRACTIONS_BLOCKED]: currentCount + 1,
   });
@@ -320,21 +326,15 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
  * Routes messages to the appropriate handler.
  */
 chrome.runtime.onMessage.addListener(
-  (
-    message: { type: string; payload?: Record<string, unknown> },
-    _sender,
-    sendResponse,
-  ) => {
+  (message: { type: string; payload?: Record<string, unknown> }, _sender, sendResponse) => {
     switch (message.type) {
       case 'GET_FOCUS_STATE':
-        chrome.storage.local
-          .get(STORAGE_KEYS.FOCUS_MODE)
-          .then((result) => {
-            sendResponse({
-              success: true,
-              data: result[STORAGE_KEYS.FOCUS_MODE],
-            });
+        chrome.storage.local.get(STORAGE_KEYS.FOCUS_MODE).then((result) => {
+          sendResponse({
+            success: true,
+            data: result[STORAGE_KEYS.FOCUS_MODE],
           });
+        });
         return true; // Keep the message channel open for async response
 
       case 'AUTO_SAVE':

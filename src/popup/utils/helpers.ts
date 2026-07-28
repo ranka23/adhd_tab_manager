@@ -159,11 +159,7 @@ export function sortTabsByIndex(tabs: TabInfo[]): TabInfo[] {
 /**
  * Creates a new TabSession with default values and the provided data.
  */
-export function createSession(
-  name: string,
-  tabs: TabInfo[],
-  icon: string = '📋',
-): TabSession {
+export function createSession(name: string, tabs: TabInfo[], icon: string = '📋'): TabSession {
   const now = Date.now();
   return {
     id: generateId(),

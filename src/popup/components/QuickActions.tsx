@@ -69,11 +69,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       <h3 className="quick-actions__title">Quick Actions</h3>
 
       {/* Success feedback toast */}
-      {successMessage && (
-        <div className="quick-actions__toast card-enter">
-          {successMessage}
-        </div>
-      )}
+      {successMessage && <div className="quick-actions__toast card-enter">{successMessage}</div>}
 
       <div className="quick-actions__grid">
         {/* Undo Close — always available */}
@@ -88,27 +84,19 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
         {/* Close All Non-Pinned Tabs */}
         <button
-          className={`quick-action-btn ${
-            showCloseConfirm ? 'quick-action-btn--danger' : ''
-          }`}
+          className={`quick-action-btn ${showCloseConfirm ? 'quick-action-btn--danger' : ''}`}
           onClick={handleCloseAll}
           onBlur={() => setShowCloseConfirm(false)}
           aria-label={
-            showCloseConfirm
-              ? 'Confirm close all non-pinned tabs'
-              : 'Close all non-pinned tabs'
+            showCloseConfirm ? 'Confirm close all non-pinned tabs' : 'Close all non-pinned tabs'
           }
         >
-          <span className="quick-action-btn__icon">
-            {showCloseConfirm ? '⚠️' : '🗑️'}
-          </span>
+          <span className="quick-action-btn__icon">{showCloseConfirm ? '⚠️' : '🗑️'}</span>
           <span className="quick-action-btn__label">
             {showCloseConfirm ? 'Confirm?' : 'Close All'}
           </span>
           {!showCloseConfirm && tabCount > 0 && (
-            <span className="quick-action-btn__badge">
-              {tabCount - pinnedCount}
-            </span>
+            <span className="quick-action-btn__badge">{tabCount - pinnedCount}</span>
           )}
         </button>
 
@@ -119,9 +107,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             {tabCount} tab{tabCount !== 1 ? 's' : ''} open
           </span>
           {pinnedCount > 0 && (
-            <span className="quick-action-btn__subtext">
-              {pinnedCount} pinned
-            </span>
+            <span className="quick-action-btn__subtext">{pinnedCount} pinned</span>
           )}
         </div>
       </div>

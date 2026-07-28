@@ -41,19 +41,14 @@ export const DailyQuote: React.FC<DailyQuoteProps> = ({ stats }) => {
   /** Calculate total focus time in hours and minutes */
   const focusHours = Math.floor(stats.focusMinutes / 60);
   const focusMins = stats.focusMinutes % 60;
-  const focusTimeString =
-    focusHours > 0
-      ? `${focusHours}h ${focusMins}m`
-      : `${focusMins}m`;
+  const focusTimeString = focusHours > 0 ? `${focusHours}h ${focusMins}m` : `${focusMins}m`;
 
   return (
     <div className="daily-quote">
       {/* Greeting and quote */}
       <div className="daily-quote__content">
         <p className="daily-quote__greeting">{getTimeGreeting()}! 👋</p>
-        <p className="daily-quote__text">
-          {MOTIVATIONAL_QUOTES[quoteIndex]}
-        </p>
+        <p className="daily-quote__text">{MOTIVATIONAL_QUOTES[quoteIndex]}</p>
       </div>
 
       {/* Daily progress summary — visual stats */}
@@ -71,9 +66,7 @@ export const DailyQuote: React.FC<DailyQuoteProps> = ({ stats }) => {
         {stats.pomodorosCompleted > 0 && (
           <div className="daily-quote__stat">
             <span className="daily-quote__stat-icon">🍅</span>
-            <span className="daily-quote__stat-value">
-              {stats.pomodorosCompleted}
-            </span>
+            <span className="daily-quote__stat-value">{stats.pomodorosCompleted}</span>
             <span className="daily-quote__stat-label">pomodoros</span>
           </div>
         )}
@@ -82,9 +75,7 @@ export const DailyQuote: React.FC<DailyQuoteProps> = ({ stats }) => {
         {stats.distractionsBlocked > 0 && (
           <div className="daily-quote__stat">
             <span className="daily-quote__stat-icon">🛡️</span>
-            <span className="daily-quote__stat-value">
-              {stats.distractionsBlocked}
-            </span>
+            <span className="daily-quote__stat-value">{stats.distractionsBlocked}</span>
             <span className="daily-quote__stat-label">blocked</span>
           </div>
         )}
@@ -93,9 +84,7 @@ export const DailyQuote: React.FC<DailyQuoteProps> = ({ stats }) => {
         {stats.currentStreak > 0 && (
           <div className="daily-quote__stat daily-quote__stat--highlight">
             <span className="daily-quote__stat-icon fire-pulse">🔥</span>
-            <span className="daily-quote__stat-value">
-              {stats.currentStreak}
-            </span>
+            <span className="daily-quote__stat-value">{stats.currentStreak}</span>
             <span className="daily-quote__stat-label">streak</span>
           </div>
         )}

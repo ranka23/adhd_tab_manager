@@ -77,8 +77,7 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
   );
 
   /** Calculate stroke-dashoffset for the ring animation */
-  const strokeDashoffset =
-    CIRCLE_CIRCUMFERENCE - (progress / 100) * CIRCLE_CIRCUMFERENCE;
+  const strokeDashoffset = CIRCLE_CIRCUMFERENCE - (progress / 100) * CIRCLE_CIRCUMFERENCE;
 
   /** Determine the ring color based on timer phase */
   const getRingColor = (): string => {
@@ -126,21 +125,9 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
 
       {/* SVG circular timer */}
       <div className="pomodoro-timer__ring-container">
-        <svg
-          className="pomodoro-timer__ring"
-          viewBox="0 0 120 120"
-          width={160}
-          height={160}
-        >
+        <svg className="pomodoro-timer__ring" viewBox="0 0 120 120" width={160} height={160}>
           {/* Background circle (track) */}
-          <circle
-            cx="60"
-            cy="60"
-            r={CIRCLE_RADIUS}
-            fill="none"
-            stroke="#e8e8e8"
-            strokeWidth="6"
-          />
+          <circle cx="60" cy="60" r={CIRCLE_RADIUS} fill="none" stroke="#e8e8e8" strokeWidth="6" />
           {/* Progress circle (animated) */}
           <circle
             cx="60"
@@ -173,9 +160,7 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
         </div>
         {streak > 0 && (
           <div className="pomodoro-timer__stat pomodoro-timer__streak">
-            <span className="pomodoro-timer__stat-value fire-pulse">
-              🔥 {streak}
-            </span>
+            <span className="pomodoro-timer__stat-value fire-pulse">🔥 {streak}</span>
             <span className="pomodoro-timer__stat-label">streak</span>
           </div>
         )}
@@ -214,10 +199,7 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
       </div>
 
       {/* Settings toggle */}
-      <button
-        className="btn btn--text btn--small"
-        onClick={() => setShowSettings(!showSettings)}
-      >
+      <button className="btn btn--text btn--small" onClick={() => setShowSettings(!showSettings)}>
         ⚙️ Settings
       </button>
 

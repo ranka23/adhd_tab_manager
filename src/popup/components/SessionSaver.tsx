@@ -146,10 +146,7 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
 
           {/* Dialog actions */}
           <div className="session-saver__dialog-actions">
-            <button
-              className="btn btn--text"
-              onClick={() => setShowSaveDialog(false)}
-            >
+            <button className="btn btn--text" onClick={() => setShowSaveDialog(false)}>
               Cancel
             </button>
             <button

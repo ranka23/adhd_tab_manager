@@ -258,11 +258,7 @@
   transform: translate(-50%, -50%);
   width: 200px;
   height: 200px;
-  background: radial-gradient(
-    circle,
-    rgba(100, 181, 246, 0.15) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgba(100, 181, 246, 0.15) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }

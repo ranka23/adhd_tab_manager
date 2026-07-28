@@ -24,9 +24,7 @@ export async function autoSaveTabs(tabs: TabInfo[]): Promise<void> {
     (result[STORAGE_KEYS.AUTO_SAVED_TABS] as AutoSaveEntry[] | undefined) ?? [];
 
   // Filter to only keep entries from today (rolling 24 hours)
-  const recentEntries = existing.filter(
-    (entry) => entry.timestamp > todayStart.getTime(),
-  );
+  const recentEntries = existing.filter((entry) => entry.timestamp > todayStart.getTime());
 
   // Add the new auto-save
   recentEntries.push({
@@ -74,8 +72,7 @@ export async function getLatestAutoSave(): Promise<AutoSaveEntry | null> {
  */
 export async function addFocusMinutes(minutes: number): Promise<number> {
   const result = await chrome.storage.local.get(STORAGE_KEYS.FOCUS_MINUTES_TODAY);
-  const current =
-    (result[STORAGE_KEYS.FOCUS_MINUTES_TODAY] as number | undefined) ?? 0;
+  const current = (result[STORAGE_KEYS.FOCUS_MINUTES_TODAY] as number | undefined) ?? 0;
   const updated = current + minutes;
 
   await chrome.storage.local.set({ [STORAGE_KEYS.FOCUS_MINUTES_TODAY]: updated });
@@ -96,8 +93,7 @@ export async function getFocusMinutesToday(): Promise<number> {
  */
 export async function incrementDistractionsBlocked(): Promise<number> {
   const result = await chrome.storage.local.get(STORAGE_KEYS.DISTRACTIONS_BLOCKED);
-  const current =
-    (result[STORAGE_KEYS.DISTRACTIONS_BLOCKED] as number | undefined) ?? 0;
+  const current = (result[STORAGE_KEYS.DISTRACTIONS_BLOCKED] as number | undefined) ?? 0;
   const updated = current + 1;
 
   await chrome.storage.local.set({ [STORAGE_KEYS.DISTRACTIONS_BLOCKED]: updated });

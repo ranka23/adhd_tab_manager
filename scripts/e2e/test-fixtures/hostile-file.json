@@ -1,0 +1,46 @@
+{
+  "exportedAt": "2026-08-01T13:00:00.000Z",
+  "__proto__": {
+    "polluted": true,
+    "sessions": [
+      {
+        "id": "evil",
+        "name": "prototype pollution",
+        "createdAt": 1754055000000,
+        "updatedAt": 1754055000000,
+        "icon": "🐛",
+        "tabs": []
+      }
+    ]
+  },
+  "constructor": { "prototype": { "isAdmin": true } },
+  "sessions": [
+    {
+      "id": "deep",
+      "name": "Deep Nesting + __proto__ tab",
+      "createdAt": 1754055000000,
+      "updatedAt": 1754055000000,
+      "icon": "🕳️",
+      "tabs": [
+        {
+          "__proto__": { "polluted": true },
+          "constructor": { "prototype": { "isAdmin": true } },
+          "id": "not-a-number",
+          "url": 12345,
+          "title": "",
+          "active": "yes",
+          "pinned": false,
+          "windowId": 1,
+          "index": -1
+        }
+      ]
+    }
+  ],
+  "blockedSites": [],
+  "timerSettings": {
+    "workMinutes": 25,
+    "shortBreakMinutes": 5,
+    "longBreakMinutes": 15,
+    "pomodorosBeforeLongBreak": 4
+  }
+}

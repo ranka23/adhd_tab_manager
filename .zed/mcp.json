@@ -1,0 +1,28 @@
+{
+  "mcp": {
+    "chrome-devtools-mcp-attach": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--browserUrl",
+        "http://127.0.0.1:9222"
+      ],
+      "env": {}
+    },
+    "chrome-devtools-mcp-launch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--executablePath",
+        "/tmp/cft/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+        "--userDataDir",
+        "/Users/user/code/automation/adhd-tab-manager/.e2e-profile",
+        "--chromeArg=--load-extension=/Users/user/code/automation/adhd-tab-manager/dist",
+        "--ignoreDefaultChromeArg=--disable-extensions"
+      ],
+      "env": {}
+    }
+  }
+}

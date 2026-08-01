@@ -1,0 +1,12 @@
+{
+  "exportedAt": "2026-08-01T13:00:00.000Z",
+  "blockedSites": [
+    { "domain": "tiktok.com", "addedAt": 1754055000000 }
+  ],
+  "timerSettings": {
+    "workMinutes": 50,
+    "shortBreakMinutes": 10,
+    "longBreakMinutes": 20,
+    "pomodorosBeforeLongBreak": 3
+  }
+}

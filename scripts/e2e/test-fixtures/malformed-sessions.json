@@ -1,0 +1,35 @@
+{
+  "exportedAt": "2026-08-01T13:00:00.000Z",
+  "sessions": [
+    {
+      "id": "bad-001",
+      "name": "Broken Session",
+      "createdAt": "not-a-number",
+      "updatedAt": 1754055000000,
+      "icon": "💥",
+      "tabs": [
+        {
+          "id": "string-id-not-number",
+          "url": 12345,
+          "title": "",
+          "active": "yes",
+          "pinned": false,
+          "windowId": 1,
+          "index": -1
+        }
+      ]
+    },
+    {
+      "id": "bad-002"
+    }
+  ],
+  "blockedSites": [
+    { "domain": 123, "addedAt": "yesterday" }
+  ],
+  "timerSettings": {
+    "workMinutes": -5,
+    "shortBreakMinutes": 0,
+    "longBreakMinutes": "fifteen",
+    "pomodorosBeforeLongBreak": 4
+  }
+}

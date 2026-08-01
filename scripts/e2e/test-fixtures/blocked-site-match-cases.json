@@ -1,0 +1,25 @@
+{
+  "description": "Reference list of test URLs for blocked-site matching checks (manual test plan §4.6 / §5). Not an import fixture.",
+  "blockedDomain": "reddit.com",
+  "shouldBlock": [
+    "https://reddit.com/",
+    "https://www.reddit.com/",
+    "https://old.reddit.com/",
+    "https://reddit.com/r/adhd",
+    "https://www.reddit.com/r/productivity/",
+    "https://np.reddit.com/"
+  ],
+  "shouldNotBlock": [
+    "https://evil-reddit.com/",
+    "https://reddit.com.evil.example/",
+    "https://notreddit.com/",
+    "https://example.com/reddit",
+    "file:///tmp/reddit.html",
+    "chrome://extensions/"
+  ],
+  "blockedDomainWithPort": "youtube.com",
+  "shouldBlockWithPort": [
+    "https://youtube.com:8443/watch?v=abc",
+    "http://youtube.com/watch?v=abc"
+  ]
+}

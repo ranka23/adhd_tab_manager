@@ -9,6 +9,11 @@ web-ext-artifacts/
 # E2E test artifacts
 artifacts/
 
+# E2E test environment (Chrome for Testing profile + pid/log)
+.e2e-profile/
+.e2e-chrome.pid
+.e2e-chrome.log
+
 # Logs
 *.log
 

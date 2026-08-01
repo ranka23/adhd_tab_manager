@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "exportedAt": "2026-08-01T12:00:00.000Z",
+  "sessions": [
+    {
+      "id": "sess-001",
+      "name": "Deep Work",
+      "createdAt": 1754049600000,
+      "updatedAt": 1754053200000,
+      "icon": "🎯",
+      "tabs": [
+        {
+          "id": 101,
+          "url": "https://github.com/",
+          "title": "GitHub",
+          "favIconUrl": "https://github.com/favicon.ico",
+          "active": false,
+          "pinned": true,
+          "windowId": 1,
+          "index": 0
+        },
+        {
+          "id": 102,
+          "url": "https://developer.mozilla.org/",
+          "title": "MDN Web Docs",
+          "favIconUrl": "https://developer.mozilla.org/favicon.ico",
+          "active": true,
+          "pinned": false,
+          "windowId": 1,
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "sess-002",
+      "name": "Reading",
+      "createdAt": 1754049000000,
+      "updatedAt": 1754049000000,
+      "icon": "📚",
+      "tabs": [
+        {
+          "id": 201,
+          "url": "https://en.wikipedia.org/wiki/Attention_deficit_hyperactivity_disorder",
+          "title": "ADHD - Wikipedia",
+          "active": false,
+          "pinned": false,
+          "windowId": 1,
+          "index": 0
+        }
+      ]
+    }
+  ],
+  "blockedSites": [
+    { "domain": "reddit.com", "addedAt": 1754049000000 },
+    { "domain": "youtube.com", "addedAt": 1754049000000 },
+    { "domain": "x.com", "addedAt": 1754049000000 }
+  ],
+  "timerSettings": {
+    "workMinutes": 25,
+    "shortBreakMinutes": 5,
+    "longBreakMinutes": 15,
+    "pomodorosBeforeLongBreak": 4
+  }
+}

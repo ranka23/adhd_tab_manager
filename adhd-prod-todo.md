@@ -10,7 +10,7 @@
 
 All tasks below have been **implemented and verified**: `pnpm build` ✅ (no warnings), `pnpm lint` ✅ (clean), `pnpm test` ✅ **238 tests / 14 files pass**, `pnpm lint:firefox` ✅ (0 errors), and a **real-browser e2e run: 32/32 checks pass** (see §9). Firefox support (MV3 event page), the cross-browser `browser` shim, the popup-heartbeat fallback, and responsive layouts were added in the same pass — see §§8–13.
 
-**Editor lint note:** the typed-linting error on `vite.config.ts` ("TSConfig does not include this file") was a config gap — `tsconfig.eslint.json` did not list root config files. Fixed by adding `vite.config.ts` / `vitest.config.ts` to its `include` (Task 9). `pnpm exec eslint vite.config.ts` now exits 0. If the error still shows in the editor, restart the ESLint/TypeScript language servers (or reload the workspace) — it's stale server state, not a config problem.
+**Editor lint note:** the typed-linting error on `vite.config.ts` ("TSConfig does not include this file") is fully resolved: `tsconfig.eslint.json` lists the root config files, `.eslintrc.cjs` now sets an **explicit absolute `tsconfigRootDir`** (so typed linting resolves identically regardless of the cwd ESLint is launched from — CLI vs editor language server), and non-TS files (`scripts/**/*.mjs`, `public/*.js`) opt out of typed linting via `parserOptions: { project: null }` overrides. `pnpm lint` now covers the **whole project** (`eslint . --ext .ts,.tsx,.mjs,.js`) and exits 0. If an old error still shows in the editor, restart the ESLint/TypeScript language servers (or reload the workspace) — it's stale server state, not a config problem.
 
 | # | Task | Status | Where |
 |---|---|---|---|
@@ -274,9 +274,9 @@ Screenshots are written to `artifacts/chrome-*.png` (light, dark, timer, focus, 
 
 ## 12. Git / CI Readiness (added 2026-08-01)
 
-- **TypeScript aligned:** `typescript@5.9.3`, `@typescript-eslint/*@8.x` (installed 8.65.0), ESLint 8.57 — no unsupported-version warnings.
+- **TypeScript aligned:** `typescript@5.9.3`, `@typescript-eslint/*@8.x` (installed 8.65.0), ESLint 8.57 — single resolved versions, no drift (lockfile importer specifiers match `package.json`).
 - **pnpm 11:** build scripts approved via `pnpm-workspace.yaml` `allowBuilds` (`spawn-sync: true`, `esbuild: false`).
-- **CI recipe:** `pnpm install --frozen-lockfile` → `pnpm lint` → `pnpm exec eslint vite.config.ts vitest.config.ts` → `pnpm test` → `pnpm build:all` → `pnpm lint:firefox` (all green today).
+- **CI recipe:** `pnpm install --frozen-lockfile` → `pnpm lint` (now whole-project) → `pnpm test` → `pnpm build:all` → `pnpm lint:firefox` → `node scripts/e2e/chrome-e2e.mjs` (all green today).
 - **Artifacts:** `dist/` (Chrome), `dist-firefox/` (Firefox), `artifacts/` (e2e screenshots) — all git-ignored; e2e script committed for repeatability.
 - **Git:** all work committed on `main`; no remote configured — add one and `git push` when ready.
 
@@ -284,4 +284,22 @@ Screenshots are written to `artifacts/chrome-*.png` (light, dark, timer, focus, 
 
 ## 13. Production-Readiness Verdict
 
-**Yes.** The extension is production-ready for Chromium and Firefox: builds clean, 238 unit/integration tests + 32 real-browser e2e checks pass, web-ext lint has 0 errors, the UI is responsive and dark-mode-consistent, and Safari is a ~1–2 day wrapper task with no code changes. Remaining before an actual store launch: replace the placeholder gecko id (`adhd-tab-manager@example.com`), AMO/Chrome Web Store review assets (store listing, screenshots from `artifacts/`), and a human pass over the §9.3 manual checklist.
+**Yes.** The extension is production-ready for Chromium and Firefox: builds clean, 238 unit/integration tests + 32 real-browser e2e checks pass, web-ext lint has 0 errors, the UI is responsive and dark-mode-consistent, and Safari is a ~1–2 day wrapper task with no code changes. Remaining before an actual store launch: replace the placeholder gecko id (`adhd-tab-manager@example.com`), AMO/Chrome Web Store review assets (store listing, screenshots from `artifacts/`), and a human pass over the §9.3 manual checklist (see `docs/manual-test-plan.md`).
+
+---
+
+## 14. Manual Testing Environment (MCP) — ready for a human (added 2026-08-01)
+
+A persistent, extension-loaded test environment is built and verified:
+
+- **`node scripts/e2e/start-test-env.mjs`** — launches **Chrome for Testing** with `dist/` loaded on CDP port `9222`, persistent profile in `.e2e-profile/` (git-ignored), prints the extension id + popup URL. Subcommands: `--stop`, `--status`, `--foreground`.
+- **`.zed/mcp.json`** — configures two servers:
+  - `chrome-devtools-mcp-attach` → attaches to the running instance via `--browserUrl http://127.0.0.1:9222`;
+  - `chrome-devtools-mcp-launch` → launches its own CfT with the extension (self-contained).
+- **`node scripts/e2e/interactive-smoke.mjs`** — quick CDP smoke (header, 5 nav tabs, quote, focus toggle, heartbeat, no overflow) against the running instance; **passes**.
+- **`scripts/e2e/discover-extension.mjs`** — robust extension-id discovery (profile-path match beats CDP targets; the MV3 service worker is often dormant and Chrome component extensions can share `service-worker-loader.js`).
+- **`docs/manual-test-plan.md`** — full human test plan: §1–12 feature/edge-case matrix (60+ checks), §13 release gate, §10 fixtures, Appendix A storage-key cheat sheet.
+- **`scripts/e2e/test-fixtures/`** — import fixtures (`valid-backup.json`, `partial-backup.json`, `malformed-sessions.json`, `hostile-file.json`, `non-object.json`, `blocked-site-match-cases.json`), guarded by `tests/fixtures.test.ts` (6 tests) so they can't drift from `validateBackupData`.
+- **Firefox smoke (real Firefox 152):** `web-ext run` loads `dist-firefox` as a temporary add-on; the add-on's IndexedDB (`storage/default/moz-extension+++…/idb`) contains the seeded defaults (`reddit.com`, `youtube`) proving the event page + `onInstalled` migration ran.
+
+**Manual test sessions verified today:** Chrome e2e harness 32/32; interactive smoke pass; Firefox load + storage-seed pass. Everything else in `docs/manual-test-plan.md` is the human checklist.

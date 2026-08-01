@@ -4,20 +4,129 @@
  * - Roboto font (Material Design standard)
  * - Global reset and base styles
  * - Layout structure
- * - MUI-inspired button styles
+ * - Modern, rounded, ADHD-friendly design tokens
  * - Utility classes
  *
- * Color palette:
- * - Primary: #1976d2 (calm blue)
- * - Secondary: #81c784 (muted green)
- * - Background: #f5f5f5 (warm neutral)
- * - Surface: #ffffff (clean white)
+ * Design system (2026 "clean trending" refresh):
+ * - Primary: #1976d2 (calm blue) with soft tint surfaces
+ * - Accent: green success / amber warnings — always theme-aware via tokens
+ * - Generous 12-16px radii, hairline borders, layered soft shadows
  */
 
-/* ============================================================
- * IMPORTS
- * ============================================================ */
+/* Google Fonts import MUST be the first statement in the stylesheet */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap');
+
+/* ============================================================
+ * CSS CUSTOM PROPERTIES (Light mode — default)
+ * ============================================================ */
+:root {
+  /* Surfaces */
+  --bg-primary: #f5f5f5;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+
+  /* Text */
+  --text-primary: #212121;
+  --text-secondary: #424242;
+  --text-muted: #9e9e9e;
+  --text-inverse: #ffffff;
+
+  /* Lines */
+  --border-color: #f0f0f0;
+  --border-strong: #e0e0e0;
+
+  /* Brand */
+  --primary-color: #1976d2;
+  --primary-hover: #1565c0;
+  --primary-light: #e3f2fd;
+  --primary-tint: #f8fbff;
+  --primary-border: #bbdefb;
+  --primary-rgb: 25, 118, 210;
+
+  /* Success (blocker / wins) */
+  --success-bg: #e8f5e9;
+  --success-text: #2e7d32;
+  --success-strong: #4caf50;
+  --success-rgb: 129, 199, 132;
+
+  /* Warnings (streaks, highlights) */
+  --warning-bg: #fff3e0;
+
+  /* Danger / destructive */
+  --danger-color: #e57373;
+  --danger-hover: #ef5350;
+  --danger-bg: #fce4ec;
+  --danger-border: #ffcdd2;
+  --danger-tint: #fff5f5;
+  --error-color: #c62828;
+  --error-bg: #fce4ec;
+  --error-border: #f8bbd0;
+
+  /* Interactive feedback */
+  --hover-tint: rgba(0, 0, 0, 0.04);
+  --ring-primary: rgba(25, 118, 210, 0.12);
+  --ring-track: #e8e8e8;
+  --toggle-thumb: #ffffff;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  /* Misc */
+  --scrollbar-thumb: #e0e0e0;
+  --scrollbar-thumb-hover: #bdbdbd;
+  --skeleton-from: #e0e0e0;
+  --skeleton-to: #f5f5f5;
+  --toast-bg: #323232;
+  --toast-color: #ffffff;
+  --overlay-bg: rgba(0, 0, 0, 0.4);
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] {
+  --bg-primary: #121212;
+  --bg-surface: #1e1e1e;
+  --bg-elevated: #2a2a2a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #bdbdbd;
+  --text-muted: #757575;
+  --text-inverse: #212121;
+  --border-color: #2b2b2b;
+  --border-strong: #444444;
+  --primary-color: #90caf9;
+  --primary-hover: #64b5f6;
+  --primary-light: #1a3a5c;
+  --primary-tint: #16202e;
+  --primary-border: #2f4a6b;
+  --primary-rgb: 144, 202, 249;
+  --success-bg: #1b3322;
+  --success-text: #81c784;
+  --success-strong: #66bb6a;
+  --success-rgb: 129, 199, 132;
+  --warning-bg: #33291a;
+  --danger-color: #ef9a9a;
+  --danger-hover: #e57373;
+  --danger-bg: #3e1a2a;
+  --danger-border: #5c2a2a;
+  --danger-tint: #2a1a1a;
+  --error-color: #ef9a9a;
+  --error-bg: #3e1a1a;
+  --error-border: #5c2a2a;
+  --hover-tint: rgba(255, 255, 255, 0.06);
+  --ring-primary: rgba(144, 202, 249, 0.16);
+  --toggle-thumb: #f5f5f5;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --scrollbar-thumb: #555555;
+  --scrollbar-thumb-hover: #777777;
+  --skeleton-from: #333333;
+  --skeleton-to: #444444;
+  --toast-bg: #eeeeee;
+  --toast-color: #212121;
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+}
 
 /* ============================================================
  * CSS RESET & BASE STYLES
@@ -44,14 +153,15 @@ body {
     'Segoe UI',
     sans-serif;
   font-size: 14px;
-  color: #212121;
-  background: #f5f5f5;
+  color: var(--text-primary);
+  background: var(--bg-primary);
   line-height: 1.5;
   /* Fixed width for the popup — matches Chrome extension popup sizing */
   width: 400px;
   min-height: 300px;
   max-height: 580px;
   overflow-y: auto;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* Scrollbar styling for the whole popup */
@@ -64,12 +174,12 @@ body::-webkit-scrollbar-track {
 }
 
 body::-webkit-scrollbar-thumb {
-  background: #e0e0e0;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 body::-webkit-scrollbar-thumb:hover {
-  background: #bdbdbd;
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* ============================================================
@@ -92,16 +202,18 @@ body::-webkit-scrollbar-thumb:hover {
  * SECTION — Vertical sections within the popup
  * ============================================================ */
 .section {
-  background: #ffffff;
-  border-radius: 12px;
+  background: var(--bg-surface);
+  border-radius: 14px;
   margin: 8px 12px;
   padding: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
   overflow: hidden;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .section--elevated {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .section__header {
@@ -109,13 +221,13 @@ body::-webkit-scrollbar-thumb:hover {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .section__title {
   font-size: 14px;
   font-weight: 600;
-  color: #424242;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -130,9 +242,10 @@ body::-webkit-scrollbar-thumb:hover {
  * ============================================================ */
 .nav-tabs {
   display: flex;
-  border-bottom: 2px solid #f0f0f0;
-  padding: 0 12px;
-  background: #ffffff;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-color);
+  padding: 6px 12px;
+  background: var(--bg-surface);
   position: sticky;
   top: 53px; /* Below the header */
   z-index: 99;
@@ -140,27 +253,44 @@ body::-webkit-scrollbar-thumb:hover {
 
 .nav-tab {
   flex: 1;
-  padding: 10px 8px;
+  padding: 8px 4px;
   border: none;
   background: transparent;
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: var(--text-muted);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  border-radius: 10px 10px 0 0;
+  position: relative;
   transition: all 0.2s ease;
   text-align: center;
 }
 
 .nav-tab:hover {
-  color: #616161;
-  background: #fafafa;
+  color: var(--text-secondary);
+  background: var(--hover-tint);
+}
+
+.nav-tab:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 .nav-tab--active {
-  color: #1976d2;
-  border-bottom-color: #1976d2;
+  color: var(--primary-color);
+  background: var(--primary-light);
+  font-weight: 600;
+}
+
+.nav-tab--active::after {
+  content: '';
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--primary-color);
 }
 
 .nav-tab__icon {
@@ -170,7 +300,7 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 /* ============================================================
- * BUTTONS — Material Design-inspired button system
+ * BUTTONS — Rounded, gradient-accent button system
  * ============================================================ */
 .btn {
   display: inline-flex;
@@ -179,7 +309,7 @@ body::-webkit-scrollbar-thumb:hover {
   gap: 6px;
   padding: 8px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
@@ -193,84 +323,92 @@ body::-webkit-scrollbar-thumb:hover {
   cursor: not-allowed;
 }
 
-/* Primary button — solid blue */
+.btn:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Primary button — soft gradient accent */
 .btn--primary {
-  background: #1976d2;
-  color: white;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  color: var(--text-inverse);
+  box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.28);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: #1565c0;
-  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.35);
+  transform: translateY(-1px);
 }
 
 .btn--primary:active:not(:disabled) {
   transform: scale(0.98);
+  box-shadow: none;
 }
 
 /* Secondary button — outlined style */
 .btn--secondary {
   background: transparent;
-  color: #1976d2;
-  border: 1px solid #1976d2;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-border);
 }
 
 .btn--secondary:hover:not(:disabled) {
-  background: #e3f2fd;
+  background: var(--primary-light);
+  border-color: var(--primary-color);
 }
 
 /* Text button — minimal, for secondary actions */
 .btn--text {
   background: transparent;
-  color: #757575;
+  color: var(--text-muted);
   padding: 4px 8px;
 }
 
 .btn--text:hover:not(:disabled) {
-  color: #1976d2;
-  background: #f5f5f5;
+  color: var(--primary-color);
+  background: var(--hover-tint);
 }
 
 /* Danger button — muted red for destructive actions */
 .btn--danger {
-  background: #e57373;
-  color: white;
+  background: var(--danger-color);
+  color: #ffffff;
 }
 
 .btn--danger:hover:not(:disabled) {
-  background: #ef5350;
+  background: var(--danger-hover);
 }
 
 /* Size variants */
 .btn--large {
   padding: 12px 32px;
   font-size: 16px;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .btn--small {
   padding: 4px 10px;
   font-size: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 /* ============================================================
  * CARD — Generic card container
  * ============================================================ */
 .card {
-  background: #ffffff;
-  border: 1px solid #f0f0f0;
-  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
   padding: 12px;
   transition: all 0.15s ease;
 }
 
 .card:hover {
-  border-color: #e0e0e0;
+  border-color: var(--border-strong);
 }
 
 .card--elevated {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 /* ============================================================
@@ -279,23 +417,23 @@ body::-webkit-scrollbar-thumb:hover {
 .input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
   font-size: 14px;
   font-family: inherit;
-  color: #212121;
-  background: #ffffff;
+  color: var(--text-primary);
+  background: var(--bg-surface);
   transition: all 0.15s ease;
 }
 
 .input:focus {
   outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--ring-primary);
 }
 
 .input::placeholder {
-  color: #bdbdbd;
+  color: var(--text-muted);
 }
 
 /* ============================================================
@@ -303,7 +441,7 @@ body::-webkit-scrollbar-thumb:hover {
  * ============================================================ */
 .divider {
   height: 1px;
-  background: #f0f0f0;
+  background: var(--border-color);
   margin: 0;
 }
 
@@ -323,7 +461,7 @@ body::-webkit-scrollbar-thumb:hover {
 
 .empty-state__text {
   font-size: 14px;
-  color: #9e9e9e;
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -340,8 +478,8 @@ body::-webkit-scrollbar-thumb:hover {
 .loading__spinner {
   width: 24px;
   height: 24px;
-  border: 3px solid #e0e0e0;
-  border-top-color: #1976d2;
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--primary-color);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -371,7 +509,7 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .text-muted {
-  color: #9e9e9e;
+  color: var(--text-muted);
 }
 
 .mt-1 {
@@ -388,4 +526,348 @@ body::-webkit-scrollbar-thumb:hover {
 
 .mb-2 {
   margin-bottom: 16px;
+}
+
+/* ============================================================
+ * ERROR BANNER — Shows errors from hooks
+ * ============================================================ */
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--error-bg);
+  color: var(--error-color);
+  font-size: 13px;
+  border-bottom: 1px solid var(--error-border);
+}
+
+.error-banner__text {
+  flex: 1;
+}
+
+.error-banner__dismiss {
+  background: none;
+  border: none;
+  color: var(--error-color);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+
+.error-banner__dismiss:hover {
+  opacity: 1;
+}
+
+/* ============================================================
+ * TOAST — Simple snackbar notification
+ * ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--toast-bg);
+  color: var(--toast-color);
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 1000;
+  box-shadow: var(--shadow-lg);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toast__action {
+  color: var(--toast-color);
+  text-decoration: underline;
+  opacity: 0.9;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.toast__action:hover {
+  opacity: 1;
+  color: var(--toast-color);
+}
+
+/* ============================================================
+ * SETTINGS ERROR — Validation error in timer settings
+ * ============================================================ */
+.settings-error {
+  color: var(--error-color);
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+/* ============================================================
+ * DOMAIN ERROR — Validation error for blocked site input
+ * ============================================================ */
+.domain-error {
+  color: var(--error-color);
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+/* ============================================================
+ * SKELETON LOADING — Pulse placeholders for loading state
+ * ============================================================ */
+.skeleton-section {
+  padding: 12px 16px;
+}
+
+.skeleton-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  animation: cardEnter 0.3s ease-out both;
+  pointer-events: none;
+}
+
+.skeleton-card__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skeleton-from) 25%, var(--skeleton-to) 50%, var(--skeleton-from) 75%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.skeleton-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-line {
+  height: 12px;
+  width: 100%;
+}
+
+.skeleton-line--title {
+  width: 60%;
+}
+
+.skeleton-line--subtitle {
+  width: 40%;
+}
+
+.skeleton-line--badge {
+  width: 30px;
+  height: 20px;
+  margin-left: auto;
+}
+
+@keyframes skeletonPulse {
+  0% {
+    background-position: 0% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ============================================================
+ * CONFIRM DIALOG — Modal overlay for destructive actions
+ * ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.confirm-dialog {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 0;
+  max-width: 300px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  animation: cardEnter 0.2s ease-out;
+}
+
+.confirm-dialog__body {
+  padding: 20px 16px 12px;
+}
+
+.confirm-dialog__message {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.confirm-dialog__hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px 16px;
+}
+
+.confirm-dialog__actions .btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.confirm-dialog__actions .btn--text {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.confirm-dialog__actions .btn--text:hover {
+  background: var(--hover-tint);
+  color: var(--text-primary);
+}
+
+/* ============================================================
+ * ORGANIZED EMPTY STATE — When all tabs are grouped
+ * ============================================================ */
+.tab-group--organized {
+  padding: 40px 16px;
+}
+
+.tab-group--organized .tab-group__empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.tab-group--organized .tab-group__empty-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 4px;
+}
+
+.tab-group--organized .tab-group__empty-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ============================================================
+ * RESPONSIVE / MOBILE
+ *
+ * The popup keeps its 400px desktop width but never exceeds the
+ * viewport, so it renders correctly in narrow popups (e.g. Firefox
+ * for Android) and when opened as a full tab. Long URLs/domain names
+ * wrap instead of breaking the layout.
+ * ============================================================ */
+
+/* Never exceed the viewport — shrinks gracefully on narrow screens */
+body {
+  width: min(400px, 100vw);
+  overflow-x: hidden;
+}
+
+/* When opened as a full page/tab (wider than a popup), center the app */
+@media (min-width: 600px) {
+  body {
+    width: min(480px, 100vw);
+    margin-inline: auto;
+  }
+}
+
+/* Long URLs and domain names wrap instead of overflowing */
+.tab-card__info,
+.tab-card__domain,
+.tab-card__title,
+.session-card__name,
+.blocked-site__domain,
+.distraction-blocker__list,
+.pomodoro-timer__time {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Compact layout for narrow viewports (≈360px and under) */
+@media (max-width: 360px) {
+  .section {
+    margin: 6px 8px;
+  }
+
+  .section__header {
+    padding: 10px 12px;
+  }
+
+  .nav-tabs {
+    padding: 4px 8px;
+  }
+
+  .header-actions {
+    gap: 4px;
+  }
+
+  .header-text {
+    font-size: 15px;
+  }
+
+  .quick-actions {
+    padding: 0 8px 12px;
+  }
+
+  .quick-actions__grid {
+    gap: 6px;
+  }
+
+  .quick-action-btn {
+    padding: 10px 4px;
+  }
+
+  .pomodoro-timer__actions,
+  .pomodoro-timer__secondary-actions {
+    gap: 6px;
+  }
+
+  .pomodoro-timer__actions .btn,
+  .pomodoro-timer__secondary-actions .btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .blocked-site {
+    padding: 8px;
+  }
+
+  .session-card {
+    padding: 10px;
+  }
 }

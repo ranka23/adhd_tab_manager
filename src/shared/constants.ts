@@ -33,6 +33,13 @@ export const STORAGE_KEYS = {
   ACTIVE_TIMER: 'adhd_active_timer',
   /** Key for closed tabs history (undo-close) */
   CLOSED_TABS: 'adhd_closed_tabs',
+  /** Key for the user's theme preference ('light' | 'dark') */
+  THEME: 'adhd_theme',
+  /** Key for the number of sessions saved today */
+  SESSIONS_SAVED_TODAY: 'adhd_sessions_saved_today',
+  /** Key for the popup heartbeat (ms timestamp). Lets the background page
+   * detect an open popup on Firefox, which lacks runtime.getContexts. */
+  POPUP_HEARTBEAT: 'adhd_popup_heartbeat',
 } as const;
 
 /** Default Pomodoro timer durations in minutes */
@@ -67,6 +74,17 @@ export const DEFAULT_BLOCKED_SITES: string[] = [
 /** Time in milliseconds between timer ticks */
 export const TIMER_TICK_INTERVAL_MS = 1000;
 
+/** How often the popup refreshes its heartbeat while open (ms) */
+export const POPUP_HEARTBEAT_INTERVAL_MS = 30_000;
+
+/**
+ * How old the popup heartbeat may be before the popup is considered closed (ms).
+ * Must be comfortably larger than POPUP_HEARTBEAT_INTERVAL_MS to tolerate
+ * throttled intervals, but small enough that a closed popup is detected
+ * within one pomodoro minute-tick.
+ */
+export const POPUP_HEARTBEAT_STALE_MS = 45_000;
+
 /** Auto-save interval in minutes */
 export const AUTO_SAVE_INTERVAL_MINUTES = 5;
 
@@ -75,3 +93,35 @@ export const MAX_CLOSED_TABS_HISTORY = 20;
 
 /** Maximum number of sessions to keep */
 export const MAX_SESSIONS = 50;
+
+/* ═══════════════════════════════════════════════════════
+ * DEBUG LOGGING & STORAGE VERSION
+ * ═══════════════════════════════════════════════════════ */
+
+/** Key used to store the storage schema version for migration */
+export const STORAGE_VERSION_KEY = 'adhd_version' as const;
+
+/** Current storage schema version — bump when making breaking changes */
+export const STORAGE_VERSION = 1 as const;
+
+/**
+ * Debug logging flag. Set to true to enable verbose console logging
+ * of storage writes, message sends, and API calls.
+ * Toggle via ?debug=true URL param or localStorage.debugMode.
+ */
+export const DEBUG =
+  (typeof window !== 'undefined' &&
+    (window.location.search.includes('debug=true') ||
+      localStorage.getItem('debugMode') === 'true')) ||
+  false;
+
+/**
+ * Log arguments to console only when DEBUG is true.
+ * Tags each log with the module name for easy filtering.
+ */
+export function debugLog(module: string, ...args: unknown[]): void {
+  if (DEBUG) {
+    // eslint-disable-next-line no-console
+    console.log(`[${module}]`, ...args);
+  }
+}

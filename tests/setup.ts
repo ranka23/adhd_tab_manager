@@ -4,6 +4,7 @@
  */
 
 import { vi } from 'vitest';
+import '@testing-library/jest-dom';
 
 /**
  * Mock chrome.storage.local API.
@@ -44,7 +45,7 @@ const chromeStorageLocal = {
  * Provides basic tab query, create, remove, and update functionality.
  */
 const chromeTabs = {
-  query: vi.fn(async () => []),
+  query: vi.fn<() => Promise<Array<{ id?: number | undefined; url?: string | undefined; title?: string | undefined; favIconUrl?: string | undefined; active?: boolean | undefined; pinned?: boolean | undefined; windowId?: number | undefined; index?: number | undefined }>>>(async () => []),
   create: vi.fn(async (options: { url?: string }) => ({
     id: Math.floor(Math.random() * 10000),
     url: options.url ?? '',
@@ -92,16 +93,37 @@ const chromeRuntime = {
   },
 };
 
-// Set up the global chrome mock
-globalThis.chrome = {
+/** Mock chrome.storage.session API (used for timer persistence). */
+const chromeStorageSession = {
+  get: vi.fn(async () => ({})),
+  set: vi.fn(async () => {}),
+  remove: vi.fn(async () => {}),
+};
+
+// Create a typed chrome object and attach to globalThis
+interface ChromeMock {
+  storage: {
+    local: typeof chromeStorageLocal;
+    session: typeof chromeStorageSession;
+  };
+  tabs: typeof chromeTabs;
+  alarms: typeof chromeAlarms;
+  notifications: typeof chromeNotifications;
+  runtime: typeof chromeRuntime;
+}
+
+const mockChrome: ChromeMock = {
   storage: {
     local: chromeStorageLocal,
+    session: chromeStorageSession,
   },
   tabs: chromeTabs,
   alarms: chromeAlarms,
   notifications: chromeNotifications,
   runtime: chromeRuntime,
-} as unknown as typeof chrome;
+};
+
+(globalThis as unknown as Record<string, unknown>).chrome = mockChrome;
 
 /**
  * Helper to clear all storage between tests.
@@ -122,6 +144,7 @@ export async function seedStorage(data: Record<string, unknown>): Promise<void> 
  */
 export const mocks = {
   storage: chromeStorageLocal,
+  session: chromeStorageSession,
   tabs: chromeTabs,
   alarms: chromeAlarms,
   notifications: chromeNotifications,

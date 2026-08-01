@@ -3,6 +3,11 @@ node_modules/
 
 # Build output
 dist/
+dist-firefox/
+web-ext-artifacts/
+
+# E2E test artifacts
+artifacts/
 
 # Logs
 *.log

@@ -15,6 +15,8 @@ interface UseBlockedSitesReturn {
   isActive: boolean;
   /** Whether sites are loading */
   isLoading: boolean;
+  /** Error message if something went wrong */
+  error: string | null;
   /** Refresh the blocked sites list */
   refresh: () => Promise<void>;
   /** Add a new site to the block list */
@@ -35,6 +37,7 @@ export function useBlockedSites(): UseBlockedSitesReturn {
   const [sites, setSites] = useState<BlockedSite[]>([]);
   const [isActive, setIsActive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /** Fetches the blocked sites and active state */
   const refresh = useCallback(async () => {
@@ -55,8 +58,15 @@ export function useBlockedSites(): UseBlockedSitesReturn {
   /** Adds a domain to the blocked list */
   const addSite = useCallback(
     async (domain: string) => {
-      await blockService.addBlockedSite(domain);
-      await refresh();
+      try {
+        setError(null);
+        await blockService.addBlockedSite(domain);
+        await refresh();
+      } catch (err) {
+        setError('Failed to add blocked site');
+        console.error('Error adding blocked site:', err);
+        throw err;
+      }
     },
     [refresh],
   );
@@ -64,20 +74,34 @@ export function useBlockedSites(): UseBlockedSitesReturn {
   /** Removes a domain from the blocked list */
   const removeSite = useCallback(
     async (domain: string) => {
-      await blockService.removeBlockedSite(domain);
-      await refresh();
+      try {
+        setError(null);
+        await blockService.removeBlockedSite(domain);
+        await refresh();
+      } catch (err) {
+        setError('Failed to remove blocked site');
+        console.error('Error removing blocked site:', err);
+        throw err;
+      }
     },
     [refresh],
   );
 
   /** Toggles the blocker active state */
   const toggleActive = useCallback(async () => {
-    if (isActive) {
-      await blockService.deactivateBlocker();
-    } else {
-      await blockService.activateBlocker();
+    try {
+      setError(null);
+      if (isActive) {
+        await blockService.deactivateBlocker();
+      } else {
+        await blockService.activateBlocker();
+      }
+      setIsActive(!isActive);
+    } catch (err) {
+      setError('Failed to toggle blocker');
+      console.error('Error toggling blocker:', err);
+      throw err;
     }
-    setIsActive(!isActive);
   }, [isActive]);
 
   /** Checks if a URL should be blocked */
@@ -94,6 +118,7 @@ export function useBlockedSites(): UseBlockedSitesReturn {
     sites,
     isActive,
     isLoading,
+    error,
     refresh,
     addSite,
     removeSite,

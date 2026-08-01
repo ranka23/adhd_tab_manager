@@ -82,7 +82,7 @@ describe('Session Service', () => {
   describe('addFocusMinutes', () => {
     it('should add focus minutes to the total', async () => {
       // Act
-      const { addFocusMinutes, getFocusMinutesToday } =
+      const { addFocusMinutes } =
         await import('../src/popup/services/sessionService');
       const total = await addFocusMinutes(30);
 
@@ -98,7 +98,7 @@ describe('Session Service', () => {
   describe('incrementDistractionsBlocked', () => {
     it('should increment the blocked count', async () => {
       // Act
-      const { incrementDistractionsBlocked, getDistractionsBlockedToday } =
+      const { incrementDistractionsBlocked } =
         await import('../src/popup/services/sessionService');
 
       const count1 = await incrementDistractionsBlocked();
@@ -135,9 +135,11 @@ describe('Session Service', () => {
       await incrementDistractionsBlocked();
 
       // Also set pomodoro stats directly in storage
-      await chrome.storage.local.set({
+      const { mocks: setupMocks } = await import('./setup');
+      await setupMocks.storage.set({
         [STORAGE_KEYS.TODAY_POMODOROS]: 5,
         [STORAGE_KEYS.POMODORO_STREAK]: 3,
+        [STORAGE_KEYS.SESSIONS_SAVED_TODAY]: 2,
       });
 
       // Act
@@ -149,6 +151,7 @@ describe('Session Service', () => {
       expect(stats.distractionsBlocked).toBe(3);
       expect(stats.pomodorosCompleted).toBe(5);
       expect(stats.currentStreak).toBe(3);
+      expect(stats.sessionsSaved).toBe(2);
     });
   });
 });

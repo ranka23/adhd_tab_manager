@@ -12,6 +12,9 @@
 import React, { useState } from 'react';
 import type { BlockedSite } from '../types';
 
+/** Regex for validating domain names */
+const DOMAIN_REGEX = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
+
 /** Props for the DistractionBlocker component */
 interface DistractionBlockerProps {
   /** All blocked sites */
@@ -45,11 +48,21 @@ export const DistractionBlocker: React.FC<DistractionBlockerProps> = ({
   const [newSite, setNewSite] = useState('');
   /** Whether to show the full list (collapsed by default for minimalism) */
   const [showFullList, setShowFullList] = useState(false);
+  /** Validation error for the domain input */
+  const [domainError, setDomainError] = useState<string | null>(null);
 
   /** Handles adding a new site */
   const handleAdd = (): void => {
-    if (!newSite.trim()) return;
-    onAddSite(newSite.trim());
+    const trimmed = newSite.trim();
+    if (!trimmed) return;
+
+    if (!DOMAIN_REGEX.test(trimmed)) {
+      setDomainError('Please enter a valid domain (e.g. example.com)');
+      return;
+    }
+
+    setDomainError(null);
+    onAddSite(trimmed);
     setNewSite('');
   };
 
@@ -74,6 +87,8 @@ export const DistractionBlocker: React.FC<DistractionBlockerProps> = ({
         <button
           className={`toggle-switch ${isActive ? 'toggle-switch--active' : ''}`}
           onClick={onToggleActive}
+          role="switch"
+          aria-checked={isActive}
           aria-label={isActive ? 'Disable blocker' : 'Enable blocker'}
         >
           <span className="toggle-switch__thumb" />
@@ -98,10 +113,15 @@ export const DistractionBlocker: React.FC<DistractionBlockerProps> = ({
           className="distraction-blocker__input"
           placeholder="Add site to block..."
           value={newSite}
-          onChange={(e) => setNewSite(e.target.value)}
+          onChange={(e) => {
+            setNewSite(e.target.value);
+            if (domainError) setDomainError(null);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleAdd();
           }}
+          aria-invalid={domainError !== null}
+          aria-describedby={domainError ? 'domain-error' : undefined}
         />
         <button
           className="btn btn--primary btn--small"
@@ -111,6 +131,11 @@ export const DistractionBlocker: React.FC<DistractionBlockerProps> = ({
           + Add
         </button>
       </div>
+      {domainError && (
+        <div className="domain-error" id="domain-error" role="alert">
+          ⚠️ {domainError}
+        </div>
+      )}
 
       {/* Blocked sites list */}
       <div className="distraction-blocker__list">

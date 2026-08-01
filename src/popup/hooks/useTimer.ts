@@ -21,6 +21,8 @@ interface UseTimerReturn {
   streak: number;
   /** Whether the timer is loading */
   isLoading: boolean;
+  /** Error message if something went wrong */
+  error: string | null;
   /** Start a new work phase */
   startWork: () => Promise<void>;
   /** Pause the running timer */
@@ -51,11 +53,17 @@ export function useTimer(): UseTimerReturn {
   const [pomodoroCount, setPomodoroCount] = useState(0);
   const [streak, setStreak] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stateRef = useRef<TimerState>(state);
+  stateRef.current = state;
 
-  /** Loads initial state from storage */
+  /** Loads initial state from storage, restoring session state if available */
   useEffect(() => {
     const init = async (): Promise<void> => {
+      // Restore timer from session storage first (survives SW restart)
+      await timerService.restoreTimerFromSession();
+
       const [timerState, timerSettings, stats] = await Promise.all([
         timerService.getTimerState(),
         timerService.getTimerSettings(),
@@ -68,6 +76,23 @@ export function useTimer(): UseTimerReturn {
       setIsLoading(false);
     };
     init();
+  }, []);
+
+  /**
+   * Persist timer state to chrome.storage.session when the popup is hidden.
+   * This ensures the timer remaining time survives service worker restarts.
+   */
+  useEffect(() => {
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'hidden') {
+        void timerService.persistTimerToSession();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return (): void => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   /** Sets up a local tick interval when the timer is running */
@@ -83,14 +108,14 @@ export function useTimer(): UseTimerReturn {
           playCompletionSound();
 
           // If it was a work phase, record the pomodoro
-          if (state.phase === 'work') {
+          if (stateRef.current.phase === 'work') {
             const stats = await timerService.recordPomodoroComplete();
             setPomodoroCount(stats.count);
             setStreak(stats.streak);
           }
 
           // Transition to next phase
-          const nextState = await timerService.transitionToNextPhase(state);
+          const nextState = await timerService.transitionToNextPhase(stateRef.current);
           setState(nextState);
         }
       }, 1000);
@@ -107,38 +132,80 @@ export function useTimer(): UseTimerReturn {
 
   /** Starts a new work phase */
   const startWork = useCallback(async () => {
-    const newState = await timerService.startWorkPhase();
-    setState(newState);
+    try {
+      setError(null);
+      const newState = await timerService.startWorkPhase();
+      setState(newState);
+    } catch (err) {
+      setError('Failed to start timer');
+      console.error('Error starting timer:', err);
+      throw err;
+    }
   }, []);
 
   /** Pauses the timer */
   const pause = useCallback(async () => {
-    const newState = await timerService.pauseTimer();
-    setState(newState);
+    try {
+      setError(null);
+      const newState = await timerService.pauseTimer();
+      setState(newState);
+    } catch (err) {
+      setError('Failed to pause timer');
+      console.error('Error pausing timer:', err);
+      throw err;
+    }
   }, []);
 
   /** Resumes the timer */
   const resume = useCallback(async () => {
-    const newState = await timerService.resumeTimer();
-    setState(newState);
+    try {
+      setError(null);
+      const newState = await timerService.resumeTimer();
+      setState(newState);
+    } catch (err) {
+      setError('Failed to resume timer');
+      console.error('Error resuming timer:', err);
+      throw err;
+    }
   }, []);
 
   /** Resets the timer to idle */
   const reset = useCallback(async () => {
-    const newState = await timerService.resetTimer();
-    setState(newState);
+    try {
+      setError(null);
+      const newState = await timerService.resetTimer();
+      setState(newState);
+    } catch (err) {
+      setError('Failed to reset timer');
+      console.error('Error resetting timer:', err);
+      throw err;
+    }
   }, []);
 
   /** Skips to the next phase */
   const skipPhase = useCallback(async () => {
-    const nextState = await timerService.transitionToNextPhase(state);
-    setState(nextState);
-  }, [state]);
+    try {
+      setError(null);
+      const nextState = await timerService.transitionToNextPhase(stateRef.current);
+      setState(nextState);
+    } catch (err) {
+      setError('Failed to skip phase');
+      console.error('Error skipping phase:', err);
+      throw err;
+    }
+  }, []);
 
   /** Updates timer settings */
   const updateSettings = useCallback(async (newSettings: TimerSettings) => {
-    await timerService.saveTimerSettings(newSettings);
-    setSettings(newSettings);
+    try {
+      setError(null);
+      await timerService.saveTimerSettings(newSettings);
+      setSettings(newSettings);
+    } catch (err) {
+      setError('Failed to save timer settings');
+      console.error('Error saving timer settings:', err);
+      throw err;
+    }
   }, []);
 
   return {
@@ -147,6 +214,7 @@ export function useTimer(): UseTimerReturn {
     pomodoroCount,
     streak,
     isLoading,
+    error,
     startWork,
     pause,
     resume,

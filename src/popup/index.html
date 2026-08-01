@@ -4,10 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ADHD Tab Manager</title>
+    <!--
+      Theme preload — apply the saved theme before any paint to avoid a
+      light/dark flash. Kept as an external file because MV3 CSP forbids
+      inline scripts in extension pages (required for Firefox support).
+    -->
+    <script src="/theme-preload.js"></script>
     <style>
-      /* Prevent FOUC — set background immediately */
+      /* Prevent FOUC — background follows the theme (falls back to light) */
       body {
-        background: #f5f5f5;
+        background: var(--bg-primary, #f5f5f5);
         margin: 0;
         padding: 0;
       }

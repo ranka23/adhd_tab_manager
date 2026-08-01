@@ -12,6 +12,7 @@
 import React from 'react';
 import type { TabInfo } from '../types';
 import { truncate, extractDomain } from '../utils/helpers';
+import { browser } from '../../shared/browser';
 
 /** Props for the TabCard component */
 interface TabCardProps {
@@ -33,7 +34,7 @@ export const TabCard: React.FC<TabCardProps> = ({ tab, onClose, onClick, index }
   /** Handles click on the card — switches to the tab in Chrome */
   const handleClick = (): void => {
     // Focus the tab in Chrome by updating its active state
-    chrome.tabs.update(tab.id, { active: true });
+    browser.tabs.update(tab.id, { active: true });
     onClick();
   };
 

@@ -138,6 +138,7 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
                   selectedIcon === icon ? 'session-saver__icon-btn--selected' : ''
                 }`}
                 onClick={() => setSelectedIcon(icon)}
+                aria-label={`Select icon ${icon}`}
               >
                 {icon}
               </button>
@@ -219,6 +220,7 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
                   <button
                     className="btn btn--text btn--small"
                     onClick={() => setPendingDeleteId(session.id)}
+                    aria-label={`Delete ${session.name}`}
                   >
                     🗑️
                   </button>

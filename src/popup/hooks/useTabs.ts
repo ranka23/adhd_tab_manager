@@ -17,8 +17,8 @@ interface UseTabsReturn {
   isLoading: boolean;
   /** Error message if something went wrong */
   error: string | null;
-  /** Refresh the tab list from Chrome */
-  refreshTabs: () => Promise<void>;
+  /** Refresh the tab list from Chrome. Returns the loaded tabs. */
+  refreshTabs: () => Promise<TabInfo[]>;
   /** Refresh the sessions list from storage */
   refreshSessions: () => Promise<void>;
   /** Close a single tab */
@@ -44,14 +44,16 @@ export function useTabs(): UseTabsReturn {
   const [error, setError] = useState<string | null>(null);
 
   /** Fetches all tabs from the current window */
-  const refreshTabs = useCallback(async () => {
+  const refreshTabs = useCallback(async (): Promise<TabInfo[]> => {
     try {
       setError(null);
       const allTabs = await tabService.getAllTabs();
       setTabs(allTabs);
+      return allTabs;
     } catch (err) {
       setError('Failed to load tabs');
       console.error('Error loading tabs:', err);
+      return [];
     }
   }, []);
 

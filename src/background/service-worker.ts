@@ -12,9 +12,11 @@
  * so we use chrome.alarms for persistent scheduling.
  */
 
-import { ALARM_NAMES, AUTO_SAVE_INTERVAL_MINUTES, STORAGE_KEYS } from '../shared/constants';
+import { ALARM_NAMES, AUTO_SAVE_INTERVAL_MINUTES, DEFAULT_BLOCKED_SITES, POPUP_HEARTBEAT_STALE_MS, STORAGE_KEYS, STORAGE_VERSION, STORAGE_VERSION_KEY } from '../shared/constants';
 import type { FocusModeState, BlockedSite } from '../popup/types';
 import { extractDomain } from '../popup/utils/helpers';
+import { matchesBlockedPattern } from '../popup/services/blockService';
+import { browser } from '../shared/browser';
 
 /* ============================================================
  * EXTENSION INSTALL / UPDATE
@@ -24,7 +26,47 @@ import { extractDomain } from '../popup/utils/helpers';
  * Runs when the extension is first installed or updated.
  * Sets up initial alarms and default settings.
  */
-chrome.runtime.onInstalled.addListener((details) => {
+/* ═══════════════════════════════════════════════════════
+ * STORAGE VERSION & MIGRATION
+ * ═══════════════════════════════════════════════════════ */
+
+/**
+ * Map of migration functions keyed by the version they migrate TO.
+ * Add new migrations here when STORAGE_VERSION is bumped.
+ */
+const migrations: Record<number, () => Promise<void>> = {
+  // 1: initial schema — no migrations needed yet
+};
+
+/**
+ * Check the stored version against the current STORAGE_VERSION.
+ * If the stored version is behind, run all pending migrations sequentially.
+ */
+async function checkAndMigrate(): Promise<void> {
+  const result = await browser.storage.local.get(STORAGE_VERSION_KEY);
+  const storedVersion = (result[STORAGE_VERSION_KEY] as number | undefined) ?? 0;
+
+  if (storedVersion >= STORAGE_VERSION) {
+    return;
+  }
+
+  console.info(
+    `[ADHD Tab Manager] Storage version ${storedVersion} → ${STORAGE_VERSION}. Running migrations…`,
+  );
+
+  for (let v = storedVersion + 1; v <= STORAGE_VERSION; v++) {
+    const migrateFn = migrations[v];
+    if (migrateFn) {
+      await migrateFn();
+    }
+    await browser.storage.local.set({ [STORAGE_VERSION_KEY]: v });
+  }
+
+  console.info('[ADHD Tab Manager] Migration complete.');
+}
+
+/** Runs on install/update — sets up alarms, defaults, and runs migrations */
+browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     // First install — set up default alarms
     setupAlarms();
@@ -34,6 +76,9 @@ chrome.runtime.onInstalled.addListener((details) => {
     // Extension updated — ensure alarms are still set
     setupAlarms();
   }
+
+  // Run data migrations
+  checkAndMigrate();
 });
 
 /**
@@ -41,39 +86,35 @@ chrome.runtime.onInstalled.addListener((details) => {
  */
 function setupAlarms(): void {
   // Auto-save tabs every 5 minutes
-  chrome.alarms.create(ALARM_NAMES.AUTO_SAVE, {
-    periodInMinutes: AUTO_SAVE_INTERVAL_MINUTES,
-  });
+  try {
+    browser.alarms.create(ALARM_NAMES.AUTO_SAVE, {
+      periodInMinutes: AUTO_SAVE_INTERVAL_MINUTES,
+    });
+  } catch (err) {
+    console.warn('[ADHD Tab Manager] Failed to create auto-save alarm:', err);
+  }
 
   // Pomodoro timer tick every minute
-  chrome.alarms.create(ALARM_NAMES.POMODORO_TICK, {
-    periodInMinutes: 1,
-  });
+  try {
+    browser.alarms.create(ALARM_NAMES.POMODORO_TICK, {
+      periodInMinutes: 1,
+    });
+  } catch (err) {
+    console.warn('[ADHD Tab Manager] Failed to create pomodoro tick alarm:', err);
+  }
 }
 
 /**
  * Initializes default settings on first install.
  */
 async function initializeDefaults(): Promise<void> {
-  // Set up default blocked sites
-  const DEFAULT_SITES = [
-    'reddit.com',
-    'twitter.com',
-    'x.com',
-    'facebook.com',
-    'instagram.com',
-    'tiktok.com',
-    'youtube.com',
-    'netflix.com',
-  ];
-
   const now = Date.now();
-  const blockedSites: BlockedSite[] = DEFAULT_SITES.map((domain) => ({
+  const blockedSites: BlockedSite[] = DEFAULT_BLOCKED_SITES.map((domain) => ({
     domain,
     addedAt: now,
   }));
 
-  await chrome.storage.local.set({
+  await browser.storage.local.set({
     [STORAGE_KEYS.BLOCKED_SITES]: blockedSites,
     [STORAGE_KEYS.BLOCKED_SITES_ACTIVE]: false,
     [STORAGE_KEYS.FOCUS_MODE]: {
@@ -92,7 +133,7 @@ async function initializeDefaults(): Promise<void> {
  * Handles alarm events from chrome.alarms API.
  * Routes to the appropriate handler based on alarm name.
  */
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+browser.alarms.onAlarm.addListener(async (alarm) => {
   switch (alarm.name) {
     case ALARM_NAMES.AUTO_SAVE:
       await handleAutoSave();
@@ -109,7 +150,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
  */
 async function handleAutoSave(): Promise<void> {
   try {
-    const tabs = await chrome.tabs.query({});
+    const tabs = await browser.tabs.query({});
     const tabInfos = tabs
       .filter((tab) => tab.url && tab.id)
       .map((tab) => ({
@@ -127,7 +168,7 @@ async function handleAutoSave(): Promise<void> {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const result = await chrome.storage.local.get(STORAGE_KEYS.AUTO_SAVED_TABS);
+    const result = await browser.storage.local.get(STORAGE_KEYS.AUTO_SAVED_TABS);
     const existing: Array<{
       timestamp: number;
       tabs: typeof tabInfos;
@@ -147,12 +188,48 @@ async function handleAutoSave(): Promise<void> {
     // Keep max 24 entries
     const trimmed = recent.slice(-24);
 
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       [STORAGE_KEYS.AUTO_SAVED_TABS]: trimmed,
       [STORAGE_KEYS.LAST_AUTO_SAVE]: Date.now(),
     });
   } catch (err) {
     console.error('Auto-save error:', err);
+  }
+}
+
+/**
+ * Returns true when a popup page is currently open.
+ * Used to avoid double-decrementing the pomodoro timer: when the popup is
+ * open it ticks locally every second, so the service worker must skip its
+ * own once-per-minute decrement to prevent the timer from running fast.
+ *
+ * Chrome 116+ can query contexts directly (runtime.getContexts). Firefox
+ * event pages lack that API, so it falls back to the popup heartbeat: the
+ * popup writes STORAGE_KEYS.POPUP_HEARTBEAT (a ms timestamp) every 30s while
+ * open, and a heartbeat fresher than POPUP_HEARTBEAT_STALE_MS means the
+ * popup is up.
+ */
+async function isPopupOpen(): Promise<boolean> {
+  const runtime = browser.runtime as unknown as {
+    getContexts?: (filter: { contextTypes: string[] }) => Promise<unknown[]>;
+  };
+  if (typeof runtime.getContexts === 'function') {
+    try {
+      const contexts = await runtime.getContexts({ contextTypes: ['POPUP'] });
+      return contexts.length > 0;
+    } catch (err) {
+      console.warn('[ADHD Tab Manager] Failed to check popup context:', err);
+    }
+  }
+
+  // Firefox / older Chrome: no getContexts — use the popup heartbeat.
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.POPUP_HEARTBEAT);
+    const heartbeat = result[STORAGE_KEYS.POPUP_HEARTBEAT] as number | undefined;
+    return typeof heartbeat === 'number' && Date.now() - heartbeat < POPUP_HEARTBEAT_STALE_MS;
+  } catch (err) {
+    console.warn('[ADHD Tab Manager] Failed to read popup heartbeat:', err);
+    return false;
   }
 }
 
@@ -163,7 +240,13 @@ async function handleAutoSave(): Promise<void> {
  */
 async function handlePomodoroTick(): Promise<void> {
   try {
-    const result = await chrome.storage.local.get(STORAGE_KEYS.ACTIVE_TIMER);
+    // The popup ticks the timer itself every second while open — skip to
+    // avoid a double-decrement race that would make the timer run fast.
+    if (await isPopupOpen()) {
+      return;
+    }
+
+    const result = await browser.storage.local.get(STORAGE_KEYS.ACTIVE_TIMER);
     const timerState = result[STORAGE_KEYS.ACTIVE_TIMER] as
       | {
           phase: string;
@@ -186,14 +269,14 @@ async function handlePomodoroTick(): Promise<void> {
       isRunning: newRemaining > 0,
     };
 
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       [STORAGE_KEYS.ACTIVE_TIMER]: updatedState,
     });
 
     // If timer completed, send a notification
     if (newRemaining <= 0) {
       const phaseLabel = timerState.phase === 'work' ? 'Focus session' : 'Break';
-      chrome.notifications.create({
+      browser.notifications.create({
         type: 'basic',
         iconUrl: 'public/icons/icon128.png',
         title: `${phaseLabel} complete!`,
@@ -218,29 +301,29 @@ async function handlePomodoroTick(): Promise<void> {
  * If focus mode is active and the URL is on the blocked list,
  * redirects the tab to a calm interstitial page.
  */
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   // Only check when the tab finishes loading a new URL
   if (changeInfo.status !== 'loading' || !tab.url) return;
 
   // Check if focus mode is active
-  const focusResult = await chrome.storage.local.get(STORAGE_KEYS.FOCUS_MODE);
+  const focusResult = await browser.storage.local.get(STORAGE_KEYS.FOCUS_MODE);
   const focusMode = focusResult[STORAGE_KEYS.FOCUS_MODE] as FocusModeState | undefined;
 
   if (!focusMode?.isActive) return;
 
   // Check if the site is on the blocked list
   const domain = extractDomain(tab.url);
-  const blockedResult = await chrome.storage.local.get(STORAGE_KEYS.BLOCKED_SITES);
+  const blockedResult = await browser.storage.local.get(STORAGE_KEYS.BLOCKED_SITES);
   const blockedSites: BlockedSite[] =
     (blockedResult[STORAGE_KEYS.BLOCKED_SITES] as BlockedSite[] | undefined) ?? [];
 
-  const isBlocked = blockedSites.some((s) => s.domain === domain);
+  const isBlocked = blockedSites.some((s) => matchesBlockedPattern(domain, s.domain));
   if (!isBlocked) return;
 
   // Increment the distractions blocked counter
-  const statsResult = await chrome.storage.local.get(STORAGE_KEYS.DISTRACTIONS_BLOCKED);
+  const statsResult = await browser.storage.local.get(STORAGE_KEYS.DISTRACTIONS_BLOCKED);
   const currentCount = (statsResult[STORAGE_KEYS.DISTRACTIONS_BLOCKED] as number | undefined) ?? 0;
-  await chrome.storage.local.set({
+  await browser.storage.local.set({
     [STORAGE_KEYS.DISTRACTIONS_BLOCKED]: currentCount + 1,
   });
 
@@ -314,7 +397,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
   // Encode the HTML as a data URL and redirect
   const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(redirectHtml)}`;
-  await chrome.tabs.update(tabId, { url: dataUrl });
+  await browser.tabs.update(tabId, { url: dataUrl });
 });
 
 /* ============================================================
@@ -325,11 +408,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
  * Handles messages sent from the popup via chrome.runtime.sendMessage.
  * Routes messages to the appropriate handler.
  */
-chrome.runtime.onMessage.addListener(
+browser.runtime.onMessage.addListener(
   (message: { type: string; payload?: Record<string, unknown> }, _sender, sendResponse) => {
     switch (message.type) {
       case 'GET_FOCUS_STATE':
-        chrome.storage.local.get(STORAGE_KEYS.FOCUS_MODE).then((result) => {
+        browser.storage.local.get(STORAGE_KEYS.FOCUS_MODE).then((result) => {
           sendResponse({
             success: true,
             data: result[STORAGE_KEYS.FOCUS_MODE],
@@ -350,8 +433,42 @@ chrome.runtime.onMessage.addListener(
   },
 );
 
+/* Run data migration check on every service worker wake */
+checkAndMigrate();
+
 /**
  * Log when the service worker starts up.
  * This helps with debugging extension lifecycle issues.
  */
 console.info('ADHD Tab Manager background service worker started');
+
+/* ============================================================
+ * TAB DISCARDING DETECTION
+ * ============================================================ */
+
+/**
+ * When a tab is discarded (replaced by a new URL), the old tab's group
+ * assignment is lost. Auto-remove discarded tabs from their group.
+ *
+ * Tab groups are Chromium-only; Firefox has no tabGroups/ungroup API, so this
+ * listener is a guarded no-op there. The API is reached through an alias so
+ * the Firefox addons-linter doesn't statically flag the Chromium-only call.
+ */
+const tabsApi = browser.tabs as typeof browser.tabs & {
+  ungroup?: (tabId: number) => Promise<void>;
+};
+
+browser.tabs.onReplaced.addListener(async (addedTabId, _removedTabId) => {
+  try {
+    const tab = await browser.tabs.get(addedTabId).catch(() => null);
+    if (tab && typeof tabsApi.ungroup === 'function' && tab.groupId !== browser.tabs.TAB_ID_NONE) {
+      // Tab was discarded but still has a group — ungroup it
+      await tabsApi.ungroup(addedTabId).catch(() => {
+        /* May fail if tab was already ungrouped */
+      });
+      console.info(`[ADHD Tab Manager] Tab ${addedTabId} was discarded, removed from group ${tab.groupId}`);
+    }
+  } catch {
+    // Tab may no longer exist
+  }
+});

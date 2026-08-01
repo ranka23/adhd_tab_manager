@@ -6,6 +6,7 @@
 
 import type { TabInfo, DailyStats } from '../types';
 import { STORAGE_KEYS } from '../../shared/constants';
+import { browser } from '../../shared/browser';
 
 /**
  * Auto-saves the current tabs to storage.
@@ -19,7 +20,7 @@ export async function autoSaveTabs(tabs: TabInfo[]): Promise<void> {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const result = await chrome.storage.local.get(STORAGE_KEYS.AUTO_SAVED_TABS);
+  const result = await browser.storage.local.get(STORAGE_KEYS.AUTO_SAVED_TABS);
   const existing: AutoSaveEntry[] =
     (result[STORAGE_KEYS.AUTO_SAVED_TABS] as AutoSaveEntry[] | undefined) ?? [];
 
@@ -36,7 +37,7 @@ export async function autoSaveTabs(tabs: TabInfo[]): Promise<void> {
   // Keep at most 24 entries (one per hour max)
   const trimmed = recentEntries.slice(-24);
 
-  await chrome.storage.local.set({
+  await browser.storage.local.set({
     [STORAGE_KEYS.AUTO_SAVED_TABS]: trimmed,
     [STORAGE_KEYS.LAST_AUTO_SAVE]: now,
   });
@@ -47,7 +48,7 @@ export async function autoSaveTabs(tabs: TabInfo[]): Promise<void> {
  * Used by the Session Saver component to show what tabs were open earlier.
  */
 export async function getAutoSaveHistory(): Promise<AutoSaveEntry[]> {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.AUTO_SAVED_TABS);
+  const result = await browser.storage.local.get(STORAGE_KEYS.AUTO_SAVED_TABS);
   const entries: AutoSaveEntry[] =
     (result[STORAGE_KEYS.AUTO_SAVED_TABS] as AutoSaveEntry[] | undefined) ?? [];
 
@@ -71,11 +72,11 @@ export async function getLatestAutoSave(): Promise<AutoSaveEntry | null> {
  * Called when focus mode ends to track daily focus minutes.
  */
 export async function addFocusMinutes(minutes: number): Promise<number> {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.FOCUS_MINUTES_TODAY);
+  const result = await browser.storage.local.get(STORAGE_KEYS.FOCUS_MINUTES_TODAY);
   const current = (result[STORAGE_KEYS.FOCUS_MINUTES_TODAY] as number | undefined) ?? 0;
   const updated = current + minutes;
 
-  await chrome.storage.local.set({ [STORAGE_KEYS.FOCUS_MINUTES_TODAY]: updated });
+  await browser.storage.local.set({ [STORAGE_KEYS.FOCUS_MINUTES_TODAY]: updated });
   return updated;
 }
 
@@ -83,7 +84,7 @@ export async function addFocusMinutes(minutes: number): Promise<number> {
  * Gets today's focus minutes.
  */
 export async function getFocusMinutesToday(): Promise<number> {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.FOCUS_MINUTES_TODAY);
+  const result = await browser.storage.local.get(STORAGE_KEYS.FOCUS_MINUTES_TODAY);
   return (result[STORAGE_KEYS.FOCUS_MINUTES_TODAY] as number | undefined) ?? 0;
 }
 
@@ -92,11 +93,11 @@ export async function getFocusMinutesToday(): Promise<number> {
  * Each blocked distraction is a small win — track it for motivation!
  */
 export async function incrementDistractionsBlocked(): Promise<number> {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.DISTRACTIONS_BLOCKED);
+  const result = await browser.storage.local.get(STORAGE_KEYS.DISTRACTIONS_BLOCKED);
   const current = (result[STORAGE_KEYS.DISTRACTIONS_BLOCKED] as number | undefined) ?? 0;
   const updated = current + 1;
 
-  await chrome.storage.local.set({ [STORAGE_KEYS.DISTRACTIONS_BLOCKED]: updated });
+  await browser.storage.local.set({ [STORAGE_KEYS.DISTRACTIONS_BLOCKED]: updated });
   return updated;
 }
 
@@ -104,7 +105,7 @@ export async function incrementDistractionsBlocked(): Promise<number> {
  * Gets the number of distractions blocked today.
  */
 export async function getDistractionsBlockedToday(): Promise<number> {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.DISTRACTIONS_BLOCKED);
+  const result = await browser.storage.local.get(STORAGE_KEYS.DISTRACTIONS_BLOCKED);
   return (result[STORAGE_KEYS.DISTRACTIONS_BLOCKED] as number | undefined) ?? 0;
 }
 
@@ -113,10 +114,10 @@ export async function getDistractionsBlockedToday(): Promise<number> {
  * Used by the DailyQuote and QuickStats components.
  */
 export async function getDailyStats(): Promise<DailyStats> {
-  const [focusMinutes, pomodoroStats, distractionsBlocked] = await Promise.all([
+  const [focusMinutes, pomodoroStats, distractionsBlocked, sessionsSaved] = await Promise.all([
     getFocusMinutesToday(),
     (async (): Promise<{ count: number; streak: number }> => {
-      const result = await chrome.storage.local.get([
+      const result = await browser.storage.local.get([
         STORAGE_KEYS.TODAY_POMODOROS,
         STORAGE_KEYS.POMODORO_STREAK,
       ]);
@@ -126,13 +127,17 @@ export async function getDailyStats(): Promise<DailyStats> {
       };
     })(),
     getDistractionsBlockedToday(),
+    (async (): Promise<number> => {
+      const result = await browser.storage.local.get(STORAGE_KEYS.SESSIONS_SAVED_TODAY);
+      return (result[STORAGE_KEYS.SESSIONS_SAVED_TODAY] as number | undefined) ?? 0;
+    })(),
   ]);
 
   return {
     focusMinutes,
     pomodorosCompleted: pomodoroStats.count,
     distractionsBlocked,
-    sessionsSaved: 0, // Will be incremented elsewhere
+    sessionsSaved,
     currentStreak: pomodoroStats.streak,
   };
 }

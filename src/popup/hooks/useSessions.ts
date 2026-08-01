@@ -13,6 +13,8 @@ interface UseSessionsReturn {
   sessions: TabSession[];
   /** Whether sessions are loading */
   isLoading: boolean;
+  /** Error message if something went wrong */
+  error: string | null;
   /** Refresh sessions from storage */
   refresh: () => Promise<void>;
   /** Save a new session with the given name and icon */
@@ -32,6 +34,7 @@ interface UseSessionsReturn {
 export function useSessions(): UseSessionsReturn {
   const [sessions, setSessions] = useState<TabSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /** Fetches all sessions from storage */
   const refresh = useCallback(async () => {
@@ -48,24 +51,45 @@ export function useSessions(): UseSessionsReturn {
   /** Saves a new session with the current window's tabs */
   const save = useCallback(
     async (name: string, icon: string): Promise<TabSession> => {
-      const currentTabs = await tabService.getCurrentWindowTabs();
-      const session = await tabService.saveSession(name, currentTabs, icon);
-      await refresh();
-      return session;
+      try {
+        setError(null);
+        const currentTabs = await tabService.getCurrentWindowTabs();
+        const session = await tabService.saveSession(name, currentTabs, icon);
+        await refresh();
+        return session;
+      } catch (err) {
+        setError('Failed to save session');
+        console.error('Error saving session:', err);
+        throw err;
+      }
     },
     [refresh],
   );
 
   /** Restores a session by opening all its saved tabs */
   const restore = useCallback(async (sessionId: string) => {
-    await tabService.restoreSession(sessionId);
+    try {
+      setError(null);
+      await tabService.restoreSession(sessionId);
+    } catch (err) {
+      setError('Failed to restore session');
+      console.error('Error restoring session:', err);
+      throw err;
+    }
   }, []);
 
   /** Deletes a session */
   const remove = useCallback(
     async (sessionId: string) => {
-      await tabService.deleteSession(sessionId);
-      await refresh();
+      try {
+        setError(null);
+        await tabService.deleteSession(sessionId);
+        await refresh();
+      } catch (err) {
+        setError('Failed to delete session');
+        console.error('Error deleting session:', err);
+        throw err;
+      }
     },
     [refresh],
   );
@@ -73,8 +97,15 @@ export function useSessions(): UseSessionsReturn {
   /** Renames a session */
   const rename = useCallback(
     async (sessionId: string, newName: string) => {
-      await tabService.renameSession(sessionId, newName);
-      await refresh();
+      try {
+        setError(null);
+        await tabService.renameSession(sessionId, newName);
+        await refresh();
+      } catch (err) {
+        setError('Failed to rename session');
+        console.error('Error renaming session:', err);
+        throw err;
+      }
     },
     [refresh],
   );
@@ -87,6 +118,7 @@ export function useSessions(): UseSessionsReturn {
   return {
     sessions,
     isLoading,
+    error,
     refresh,
     save,
     restore,

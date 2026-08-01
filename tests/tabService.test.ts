@@ -6,7 +6,19 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { clearStorage, mocks } from './setup';
 
-// Mock chrome.tabs.get for individual tab lookups
+// Tab shape used in mock data
+interface MockTab {
+  id?: number | undefined;
+  url?: string | undefined;
+  title?: string | undefined;
+  favIconUrl?: string | undefined;
+  active?: boolean | undefined;
+  pinned?: boolean | undefined;
+  windowId?: number | undefined;
+  index?: number | undefined;
+}
+
+// Mock chrome.tabs.get to return tab-specific URLs for undo-close tests
 mocks.tabs.get.mockImplementation(async (tabId: number) => ({
   id: tabId,
   url: `https://example.com/tab${tabId}`,
@@ -47,7 +59,7 @@ describe('Tab Service', () => {
           pinned: false,
           windowId: 1,
           index: 0,
-        },
+        } satisfies MockTab,
         {
           id: 2,
           url: undefined,
@@ -56,8 +68,8 @@ describe('Tab Service', () => {
           pinned: false,
           windowId: 1,
           index: 1,
-        },
-      ] as unknown as chrome.tabs.Tab[]);
+        } satisfies MockTab,
+      ]);
 
       // Act
       const { getAllTabs } = await import('../src/popup/services/tabService');
@@ -79,8 +91,8 @@ describe('Tab Service', () => {
           pinned: false,
           windowId: 1,
           index: 0,
-        },
-      ] as unknown as chrome.tabs.Tab[]);
+        } satisfies MockTab,
+      ]);
 
       // Act
       const { getAllTabs } = await import('../src/popup/services/tabService');
@@ -150,6 +162,32 @@ describe('Tab Service', () => {
       // Most recent should be first
       expect(sessions[0]?.name).toBe('Session 3');
     });
+
+    it('should increment the sessions-saved counter used by daily stats', async () => {
+      // Arrange
+      const { saveSession } = await import('../src/popup/services/tabService');
+      const { STORAGE_KEYS } = await import('../src/shared/constants');
+      const mockTabs = [
+        {
+          id: 1,
+          url: 'https://a.com',
+          title: 'A',
+          favIconUrl: undefined,
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+      ];
+
+      // Act
+      await saveSession('S1', mockTabs);
+      await saveSession('S2', mockTabs);
+
+      // Assert
+      const result = await chrome.storage.local.get(STORAGE_KEYS.SESSIONS_SAVED_TODAY);
+      expect(result[STORAGE_KEYS.SESSIONS_SAVED_TODAY]).toBe(2);
+    });
   });
 
   describe('deleteSession', () => {
@@ -189,6 +227,68 @@ describe('Tab Service', () => {
 
       // Assert
       expect(result).toBe(false);
+    });
+  });
+
+  describe('restoreDeletedSession', () => {
+    it('should re-insert a deleted session so undo works', async () => {
+      // Arrange
+      const { saveSession, deleteSession, restoreDeletedSession, getSessions } =
+        await import('../src/popup/services/tabService');
+      const mockTabs = [
+        {
+          id: 1,
+          url: 'https://a.com',
+          title: 'A',
+          favIconUrl: undefined,
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+      ];
+      const session = await saveSession('Undo Me', mockTabs, '💾');
+      await deleteSession(session.id);
+      expect(await getSessions()).toHaveLength(0);
+
+      // Act — undo the delete
+      const result = await restoreDeletedSession(session);
+
+      // Assert
+      expect(result).toBe(true);
+      const sessions = await getSessions();
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0]?.id).toBe(session.id);
+      expect(sessions[0]?.name).toBe('Undo Me');
+      expect(sessions[0]?.icon).toBe('💾');
+    });
+
+    it('should replace an existing session with the same ID rather than duplicate', async () => {
+      // Arrange
+      const { saveSession, restoreDeletedSession, getSessions } =
+        await import('../src/popup/services/tabService');
+      const mockTabs = [
+        {
+          id: 1,
+          url: 'https://a.com',
+          title: 'A',
+          favIconUrl: undefined,
+          active: false,
+          pinned: false,
+          windowId: 1,
+          index: 0,
+        },
+      ];
+      const original = await saveSession('Original', mockTabs);
+      const updated = { ...original, name: 'Updated', updatedAt: Date.now() + 1000 };
+
+      // Act
+      await restoreDeletedSession(updated);
+
+      // Assert
+      const sessions = await getSessions();
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0]?.name).toBe('Updated');
     });
   });
 

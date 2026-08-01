@@ -70,6 +70,9 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
   const [breakMin, setBreakMin] = useState(settings.shortBreakMinutes);
   const [longBreakMin, setLongBreakMin] = useState(settings.longBreakMinutes);
 
+  /** Validation error for timer settings */
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
   /** Calculate the progress for the SVG ring */
   const progress = calculateProgress(
     state.totalSeconds - state.remainingSeconds,
@@ -107,8 +110,23 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
     }
   };
 
-  /** Handle saving settings */
+  /** Handle saving settings with validation */
   const handleSaveSettings = (): void => {
+    // Validate ranges
+    if (workMin < 1 || workMin > 120) {
+      setSettingsError('Focus duration must be 1-120 minutes');
+      return;
+    }
+    if (breakMin < 1 || breakMin > 30) {
+      setSettingsError('Break duration must be 1-30 minutes');
+      return;
+    }
+    if (longBreakMin < 1 || longBreakMin > 60) {
+      setSettingsError('Long break must be 1-60 minutes');
+      return;
+    }
+
+    setSettingsError(null);
     onUpdateSettings({
       workMinutes: workMin,
       shortBreakMinutes: breakMin,
@@ -127,7 +145,7 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
       <div className="pomodoro-timer__ring-container">
         <svg className="pomodoro-timer__ring" viewBox="0 0 120 120" width={160} height={160}>
           {/* Background circle (track) */}
-          <circle cx="60" cy="60" r={CIRCLE_RADIUS} fill="none" stroke="#e8e8e8" strokeWidth="6" />
+          <circle cx="60" cy="60" r={CIRCLE_RADIUS} fill="none" strokeWidth="6" className="pomodoro-timer__ring-track" />
           {/* Progress circle (animated) */}
           <circle
             cx="60"
@@ -147,7 +165,9 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
         {/* Timer display centered inside the ring */}
         <div className="pomodoro-timer__display">
           <span className="pomodoro-timer__time">
-            {state.phase === 'idle' ? '25:00' : formatTime(state.remainingSeconds)}
+            {state.phase === 'idle'
+              ? formatTime(settings.workMinutes * 60)
+              : formatTime(state.remainingSeconds)}
           </span>
         </div>
       </div>
@@ -239,6 +259,11 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
               onChange={(e) => setLongBreakMin(Number(e.target.value))}
             />
           </div>
+          {settingsError && (
+            <div className="settings-error" role="alert">
+              ⚠️ {settingsError}
+            </div>
+          )}
           <button className="btn btn--primary btn--small" onClick={handleSaveSettings}>
             Save
           </button>

@@ -273,25 +273,55 @@ export async function resetTimer(): Promise<TimerState> {
   return state;
 }
 
+/** Returns a local-time YYYY-MM-DD date string for streak comparisons */
+function localDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /**
  * Increments today's pomodoro count and updates the streak.
+ *
+ * The streak is a count of consecutive DAYS with at least one completed
+ * pomodoro (mirroring the app's "streak" display), not a count of pomodoros:
+ * - Completing again on the same day keeps the streak unchanged.
+ * - Completing on the day after the last completion increments it.
+ * - Missing a day resets it back to 1.
  */
 export async function recordPomodoroComplete(): Promise<{ count: number; streak: number }> {
   try {
     const result = await browser.storage.local.get([
       STORAGE_KEYS.TODAY_POMODOROS,
       STORAGE_KEYS.POMODORO_STREAK,
+      STORAGE_KEYS.LAST_POMODORO_DATE,
     ]);
 
     const currentCount = (result[STORAGE_KEYS.TODAY_POMODOROS] as number | undefined) ?? 0;
     const currentStreak = (result[STORAGE_KEYS.POMODORO_STREAK] as number | undefined) ?? 0;
+    const lastDate = result[STORAGE_KEYS.LAST_POMODORO_DATE] as string | undefined;
+
+    const today = new Date();
+    const todayStr = localDateString(today);
+    const yesterdayStr = localDateString(new Date(today.getTime() - 86_400_000));
 
     const newCount = currentCount + 1;
-    const newStreak = currentStreak + 1;
+    let newStreak: number;
+    if (lastDate === todayStr) {
+      // Already completed one today — don't double-count the streak.
+      newStreak = currentStreak;
+    } else if (lastDate === yesterdayStr) {
+      newStreak = currentStreak + 1;
+    } else {
+      // First pomodoro ever, or a day was missed — start fresh.
+      newStreak = 1;
+    }
 
     await browser.storage.local.set({
       [STORAGE_KEYS.TODAY_POMODOROS]: newCount,
       [STORAGE_KEYS.POMODORO_STREAK]: newStreak,
+      [STORAGE_KEYS.LAST_POMODORO_DATE]: todayStr,
     });
 
     return { count: newCount, streak: newStreak };

@@ -311,6 +311,11 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
   if (!focusMode?.isActive) return;
 
+  // The blocker must be enabled too — the user can toggle it off mid-focus
+  // from the Block tab, and redirects should stop until focus restarts it.
+  const activeResult = await browser.storage.local.get(STORAGE_KEYS.BLOCKED_SITES_ACTIVE);
+  if (activeResult[STORAGE_KEYS.BLOCKED_SITES_ACTIVE] !== true) return;
+
   // Check if the site is on the blocked list
   const domain = extractDomain(tab.url);
   const blockedResult = await browser.storage.local.get(STORAGE_KEYS.BLOCKED_SITES);
@@ -327,77 +332,10 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     [STORAGE_KEYS.DISTRACTIONS_BLOCKED]: currentCount + 1,
   });
 
-  // Redirect to a calm interstitial page
-  // We use a data URL with a calming message
-  const redirectHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-          font-family: 'Segoe UI', Roboto, sans-serif;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          background: linear-gradient(135deg, #e3f2fd 0%, #f5f5f5 100%);
-          color: #424242;
-        }
-        .container {
-          text-align: center;
-          max-width: 420px;
-          padding: 40px;
-        }
-        .icon { font-size: 64px; margin-bottom: 24px; }
-        h1 { font-size: 24px; font-weight: 600; margin-bottom: 12px; color: #1976d2; }
-        p { font-size: 16px; color: #616161; margin-bottom: 8px; line-height: 1.6; }
-        .domain { font-weight: 600; color: #212121; }
-        .btn {
-          display: inline-block;
-          margin-top: 24px;
-          padding: 12px 32px;
-          border: none;
-          border-radius: 24px;
-          font-size: 16px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .btn-primary {
-          background: #1976d2;
-          color: white;
-        }
-        .btn-primary:hover { background: #1565c0; }
-        .btn-secondary {
-          background: #e3f2fd;
-          color: #1976d2;
-          margin-left: 12px;
-        }
-        .btn-secondary:hover { background: #bbdefb; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="icon">🧘</div>
-        <h1>Pause and breathe</h1>
-        <p>You were heading to <span class="domain">${domain}</span></p>
-        <p>Is this intentional? You're in focus mode right now.</p>
-        <button class="btn btn-primary" onclick="window.history.back()">
-          Go Back
-        </button>
-        <button class="btn btn-secondary" onclick="window.close()">
-          It's intentional
-        </button>
-      </div>
-    </body>
-    </html>
-  `;
-
-  // Encode the HTML as a data URL and redirect
-  const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(redirectHtml)}`;
-  await browser.tabs.update(tabId, { url: dataUrl });
+  // Redirect to a calm interstitial page (a real extension page — Chrome no
+  // longer reliably commits data: URL navigations from tabs.update).
+  const interstitialUrl = `${browser.runtime.getURL('interstitial.html')}?blocked=${encodeURIComponent(domain)}`;
+  await browser.tabs.update(tabId, { url: interstitialUrl });
 });
 
 /* ============================================================

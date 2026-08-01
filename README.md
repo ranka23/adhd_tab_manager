@@ -58,21 +58,39 @@ This extension follows ADHD-specific design principles:
 # Install dependencies
 pnpm install
 
-# Start development server
-pnpm dev
+# Build both targets (Chrome dist/ + Firefox dist-firefox/)
+pnpm build:all
 
-# Build for production
-pnpm build
-
-# Run tests
+# Run unit/integration tests (248)
 pnpm test
 
 # Lint
 pnpm lint
 
+# Firefox add-on lint (web-ext)
+pnpm lint:firefox
+
 # Format
 pnpm format
 ```
+
+### Real-browser verification
+
+```bash
+# Automated Chrome e2e (32 checks, headless, temp profile)
+node scripts/e2e/chrome-e2e.mjs
+
+# Full manual-test matrix (74 checks, real clicks/tabs/storage/SW)
+node scripts/e2e/manual-test.mjs
+
+# + the ~60s service-worker tick test (timer completes with popup closed)
+MANUAL_TEST_SLOW=1 node scripts/e2e/manual-test.mjs
+
+# Interactive environment for MCP-driven / human testing (Chrome for Testing :9222)
+node scripts/e2e/start-test-env.mjs
+```
+
+Results: `docs/manual-test-results.md`, `docs/manual-test-plan.md`, `adhd-prod-todo.md`.
 
 ### Loading the Extension
 

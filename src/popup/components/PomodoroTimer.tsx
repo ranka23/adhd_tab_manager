@@ -112,16 +112,16 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
 
   /** Handle saving settings with validation */
   const handleSaveSettings = (): void => {
-    // Validate ranges
-    if (workMin < 1 || workMin > 120) {
+    // Validate ranges (Number.isFinite also rejects NaN from non-numeric input)
+    if (!Number.isFinite(workMin) || workMin < 1 || workMin > 120) {
       setSettingsError('Focus duration must be 1-120 minutes');
       return;
     }
-    if (breakMin < 1 || breakMin > 30) {
+    if (!Number.isFinite(breakMin) || breakMin < 1 || breakMin > 30) {
       setSettingsError('Break duration must be 1-30 minutes');
       return;
     }
-    if (longBreakMin < 1 || longBreakMin > 60) {
+    if (!Number.isFinite(longBreakMin) || longBreakMin < 1 || longBreakMin > 60) {
       setSettingsError('Long break must be 1-60 minutes');
       return;
     }

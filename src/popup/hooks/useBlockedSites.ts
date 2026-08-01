@@ -25,6 +25,10 @@ interface UseBlockedSitesReturn {
   removeSite: (domain: string) => Promise<void>;
   /** Toggle the blocker on/off */
   toggleActive: () => Promise<void>;
+  /** Force the blocker on (focus mode start) */
+  activate: () => Promise<void>;
+  /** Force the blocker off (focus mode end) */
+  deactivate: () => Promise<void>;
   /** Check if a specific URL is blocked */
   checkUrl: (url: string) => Promise<boolean>;
 }
@@ -104,6 +108,32 @@ export function useBlockedSites(): UseBlockedSitesReturn {
     }
   }, [isActive]);
 
+  /** Forces the blocker on (used when focus mode starts) */
+  const activate = useCallback(async () => {
+    try {
+      setError(null);
+      await blockService.activateBlocker();
+      setIsActive(true);
+    } catch (err) {
+      setError('Failed to activate blocker');
+      console.error('Error activating blocker:', err);
+      throw err;
+    }
+  }, []);
+
+  /** Forces the blocker off (used when focus mode ends) */
+  const deactivate = useCallback(async () => {
+    try {
+      setError(null);
+      await blockService.deactivateBlocker();
+      setIsActive(false);
+    } catch (err) {
+      setError('Failed to deactivate blocker');
+      console.error('Error deactivating blocker:', err);
+      throw err;
+    }
+  }, []);
+
   /** Checks if a URL should be blocked */
   const checkUrl = useCallback(async (url: string): Promise<boolean> => {
     return blockService.shouldBlockUrl(url);
@@ -123,6 +153,8 @@ export function useBlockedSites(): UseBlockedSitesReturn {
     addSite,
     removeSite,
     toggleActive,
+    activate,
+    deactivate,
     checkUrl,
   };
 }

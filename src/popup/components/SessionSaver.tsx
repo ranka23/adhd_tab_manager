@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import type { TabSession } from '../types';
 import { formatDate } from '../utils/helpers';
 import { SESSION_ICONS, SESSION_NAME_SUGGESTIONS } from '../utils/constants';
+import { MAX_SESSIONS } from '../../shared/constants';
 
 /** Props for the SessionSaver component */
 interface SessionSaverProps {
@@ -27,6 +28,8 @@ interface SessionSaverProps {
   onRestore: (sessionId: string) => Promise<void>;
   /** Callback to delete a session */
   onDelete: (sessionId: string) => Promise<void>;
+  /** Callback to rename a session */
+  onRename: (sessionId: string, newName: string) => Promise<void>;
   /** Callback to undo-close the last closed tab */
   onUndoClose: () => Promise<boolean>;
 }
@@ -41,6 +44,7 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
   onSave,
   onRestore,
   onDelete,
+  onRename,
   onUndoClose,
 }) => {
   /** Whether the save dialog is open */
@@ -53,16 +57,30 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   /** Session ID pending deletion (for confirmation) */
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  /** Whether the session limit has been reached */
+  const [capError, setCapError] = useState<string | null>(null);
+  /** Session ID currently being renamed (inline edit) */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  /** Draft name for the rename input */
+  const [editName, setEditName] = useState('');
 
   /** Handles the save action */
   const handleSave = async (): Promise<void> => {
     if (!newSessionName.trim()) return;
+    // Enforce the hard cap: never silently drop the oldest session.
+    if (sessions.length >= MAX_SESSIONS) {
+      setCapError(
+        `Session limit reached (${MAX_SESSIONS}). Delete a session first to save a new one.`,
+      );
+      return;
+    }
     setIsSaving(true);
     try {
       await onSave(newSessionName.trim(), selectedIcon);
       setNewSessionName('');
       setSelectedIcon('📋');
       setShowSaveDialog(false);
+      setCapError(null);
     } finally {
       setIsSaving(false);
     }
@@ -79,6 +97,19 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
     await onUndoClose();
   };
 
+  /** Starts an inline rename for a session */
+  const startRename = (session: TabSession): void => {
+    setEditingId(session.id);
+    setEditName(session.name);
+  };
+
+  /** Submits the inline rename */
+  const handleRenameSubmit = async (sessionId: string): Promise<void> => {
+    if (!editName.trim()) return;
+    await onRename(sessionId, editName.trim());
+    setEditingId(null);
+  };
+
   return (
     <div className="session-saver">
       {/* Action buttons row */}
@@ -86,7 +117,14 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
         {/* Save current tabs as session */}
         <button
           className="btn btn--primary"
-          onClick={() => setShowSaveDialog(true)}
+          onClick={() => {
+            setCapError(
+              sessions.length >= MAX_SESSIONS
+                ? `Session limit reached (${MAX_SESSIONS}). Delete a session first to save a new one.`
+                : null,
+            );
+            setShowSaveDialog(true);
+          }}
           disabled={openTabCount === 0}
         >
           💾 Save Tabs ({openTabCount})
@@ -158,6 +196,13 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
               {isSaving ? 'Saving...' : 'Save'}
             </button>
           </div>
+
+          {/* Session limit notice */}
+          {capError && (
+            <p className="session-saver__cap-error" role="alert">
+              ⚠️ {capError}
+            </p>
+          )}
         </div>
       )}
 
@@ -183,10 +228,38 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
               <div className="session-card__header">
                 <span className="session-card__icon">{session.icon}</span>
                 <div className="session-card__info">
-                  <span className="session-card__name">{session.name}</span>
-                  <span className="session-card__meta">
-                    {session.tabs.length} tabs · {formatDate(session.createdAt)}
-                  </span>
+                  {editingId === session.id ? (
+                    <div className="session-card__edit">
+                      <input
+                        className="session-saver__input session-card__edit-input"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void handleRenameSubmit(session.id);
+                          if (e.key === 'Escape') setEditingId(null);
+                        }}
+                        autoFocus
+                        aria-label={`Rename ${session.name}`}
+                      />
+                      <button
+                        className="btn btn--primary btn--small"
+                        onClick={() => void handleRenameSubmit(session.id)}
+                        disabled={!editName.trim()}
+                      >
+                        Save
+                      </button>
+                      <button className="btn btn--text btn--small" onClick={() => setEditingId(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="session-card__name">{session.name}</span>
+                      <span className="session-card__meta">
+                        {session.tabs.length} tabs · {formatDate(session.createdAt)}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -225,6 +298,16 @@ export const SessionSaver: React.FC<SessionSaverProps> = ({
                     🗑️
                   </button>
                 )}
+
+                {/* Rename */}
+                <button
+                  className="btn btn--text btn--small"
+                  onClick={() => startRename(session)}
+                  aria-label={`Rename ${session.name}`}
+                  title="Rename session"
+                >
+                  ✏️
+                </button>
               </div>
             </div>
           ))

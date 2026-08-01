@@ -21,6 +21,9 @@ export const STORAGE_KEYS = {
   TODAY_POMODOROS: 'adhd_today_pomodoros',
   /** Key for the current streak count */
   POMODORO_STREAK: 'adhd_pomodoro_streak',
+  /** Key for the date (YYYY-MM-DD) of the last completed pomodoro — used to
+   * compute a real day-based streak that resets after a missed day. */
+  LAST_POMODORO_DATE: 'adhd_last_pomodoro_date',
   /** Key for auto-saved tabs (session saver) */
   AUTO_SAVED_TABS: 'adhd_auto_saved_tabs',
   /** Key for last auto-save timestamp */

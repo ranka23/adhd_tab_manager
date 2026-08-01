@@ -54,6 +54,13 @@ export async function getStoredTheme(): Promise<Theme | null> {
 export async function saveTheme(theme: Theme): Promise<void> {
   try {
     await browser.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
+    // Mirror to localStorage so the preload script can apply it synchronously
+    // on the next open — eliminates the light/dark flash window entirely.
+    try {
+      localStorage.setItem('adhd_theme_cache', theme);
+    } catch {
+      /* localStorage unavailable — best-effort cache */
+    }
   } catch (err) {
     console.error('theme: Failed to save theme:', err);
   }

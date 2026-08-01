@@ -11,6 +11,7 @@
 
 import React, { useState } from 'react';
 import type { BlockedSite } from '../types';
+import { extractDomain } from '../utils/helpers';
 
 /** Regex for validating domain names */
 const DOMAIN_REGEX = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
@@ -56,13 +57,18 @@ export const DistractionBlocker: React.FC<DistractionBlockerProps> = ({
     const trimmed = newSite.trim();
     if (!trimmed) return;
 
-    if (!DOMAIN_REGEX.test(trimmed)) {
+    // Normalize so users can paste full URLs ("https://www.Twitter.Com" →
+    // "twitter.com"). extractDomain falls back to the raw input for strings
+    // it can't parse, which then fail the domain regex below.
+    const normalized = extractDomain(trimmed);
+
+    if (!DOMAIN_REGEX.test(normalized)) {
       setDomainError('Please enter a valid domain (e.g. example.com)');
       return;
     }
 
     setDomainError(null);
-    onAddSite(trimmed);
+    onAddSite(normalized);
     setNewSite('');
   };
 

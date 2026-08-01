@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { clearStorage } from './setup';
+import { clearStorage, mocks } from './setup';
 
 describe('Timer Service', () => {
   beforeEach(async () => {
@@ -208,6 +208,65 @@ describe('Timer Service', () => {
       expect(state.phase).toBe('idle');
       expect(state.isRunning).toBe(false);
       expect(state.remainingSeconds).toBe(0);
+    });
+  });
+
+  describe('recordPomodoroComplete (day-aware streak)', () => {
+    const dateStr = (offsetDays: number): string => {
+      const d = new Date(Date.now() + offsetDays * 86_400_000);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    it('records the first pomodoro ever with a streak of 1', async () => {
+      const { recordPomodoroComplete } = await import('../src/popup/services/timerService');
+      const result = await recordPomodoroComplete();
+      expect(result).toEqual({ count: 1, streak: 1 });
+
+      const stored = await mocks.storage.get([
+        'adhd_today_pomodoros',
+        'adhd_pomodoro_streak',
+        'adhd_last_pomodoro_date',
+      ]);
+      expect(stored.adhd_last_pomodoro_date).toBe(dateStr(0));
+    });
+
+    it('increments the streak when the last completion was yesterday', async () => {
+      const { seedStorage } = await import('./setup');
+      await seedStorage({
+        adhd_today_pomodoros: 2,
+        adhd_pomodoro_streak: 2,
+        adhd_last_pomodoro_date: dateStr(-1),
+      });
+      const { recordPomodoroComplete } = await import('../src/popup/services/timerService');
+      const result = await recordPomodoroComplete();
+      expect(result).toEqual({ count: 3, streak: 3 });
+    });
+
+    it('keeps the streak unchanged for a second completion on the same day', async () => {
+      const { seedStorage } = await import('./setup');
+      await seedStorage({
+        adhd_today_pomodoros: 1,
+        adhd_pomodoro_streak: 5,
+        adhd_last_pomodoro_date: dateStr(0),
+      });
+      const { recordPomodoroComplete } = await import('../src/popup/services/timerService');
+      const result = await recordPomodoroComplete();
+      expect(result).toEqual({ count: 2, streak: 5 });
+    });
+
+    it('resets the streak to 1 after a missed day', async () => {
+      const { seedStorage } = await import('./setup');
+      await seedStorage({
+        adhd_today_pomodoros: 0,
+        adhd_pomodoro_streak: 7,
+        adhd_last_pomodoro_date: dateStr(-2),
+      });
+      const { recordPomodoroComplete } = await import('../src/popup/services/timerService');
+      const result = await recordPomodoroComplete();
+      expect(result).toEqual({ count: 1, streak: 1 });
     });
   });
 

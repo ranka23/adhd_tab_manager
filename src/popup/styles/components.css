@@ -586,6 +586,31 @@
   animation: fadeIn 0.15s ease;
 }
 
+/* Inline rename row on a session card */
+.session-card__edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.session-card__edit-input {
+  flex: 1;
+  min-width: 120px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.session-saver__cap-error {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--error-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
 /* ============================================================
  * SESSION SAVER
  * ============================================================ */

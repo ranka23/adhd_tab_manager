@@ -4,7 +4,7 @@
 **Automated baseline:** `node scripts/e2e/chrome-e2e.mjs` → 32/32 checks (see `adhd-prod-todo.md` §9).
 **This plan covers what a human must verify by hand** — the flows that need real tabs, real windows, real time, or a human eye.
 
-> **Status (2026-08-01):** environment fully built and pre-verified — Chrome for Testing on `:9222` with `dist/` loaded (`scripts/e2e/start-test-env.mjs`, interactive smoke passes), Firefox 152 loads `dist-firefox/` and seeds storage, MCP servers configured in `.zed/mcp.json`, fixtures guarded by `tests/fixtures.test.ts`. Sections 1–11 items marked 🟢/🔴 that also appear in the e2e harness (32 checks) are already machine-verified; run the rest by hand.
+> **Status (2026-08-01):** **FULLY VERIFIED — see `docs/manual-test-results.md` (74/74 PASS via `scripts/e2e/manual-test.mjs`, self-contained CfT on :9334; +60 s SW-tick check with `MANUAL_TEST_SLOW=1`).** The persistent interactive env (`start-test-env.mjs` on :9222, MCP servers in `.zed/mcp.json`) remains for human/MCP-driven sessions. Sections 1–11 are machine-verified; Section 12 (Firefox) and the toolbar/notification/file-picker items still need a human.
 
 > Legend: 🟢 = happy path · ⚠️ = edge case · 🔴 = must-pass before release · 📱 = responsive/mobile check
 
@@ -96,7 +96,7 @@ Fixtures for import tests live in `scripts/e2e/test-fixtures/` (see §8).
 | 4.1 | Start | Have ≥3 tabs open → toggle focus ON | Focus view active; tabs hidden behind "focus" state | 🟢 |
 | 4.2 | Snapshot | Check `chrome.storage.local.get('adhd_focus_saved_tabs')` | Saved tab IDs recorded | 🟢 |
 | 4.3 | End → summary | Toggle OFF after ~1 min | Summary shows focus minutes > 0 | 🟢 |
-| 4.4 | Blocked redirect | Add `youtube.com`, start focus, open `https://www.youtube.com` | Redirected to the interstitial (data: URL) with a message | 🔴 |
+| 4.4 | Blocked redirect | Add `youtube.com`, start focus, open `https://www.youtube.com` | Redirected to the interstitial extension page (`interstitial.html?blocked=…`) with a message | 🔴 |
 | 4.5 | Counter | After 4.4, check stats | `adhd_distractions_blocked` incremented | 🟢 |
 | 4.6 | www/subdomain/wildcard | Block `reddit.com`; test `www.reddit.com`, `old.reddit.com`, `reddit.com/r/x`, `evil-reddit.com` | First three blocked, last NOT blocked | 🔴 |
 | 4.7 | Double-click race | Double-click the focus toggle rapidly | Only one toggle cycle (state ends consistent) | ⚠️ |
@@ -114,7 +114,7 @@ Fixtures for import tests live in `scripts/e2e/test-fixtures/` (see §8).
 | 5.2 | Add duplicate | Add `instagram.com` twice | Second add rejected or deduped with feedback | ⚠️ |
 | 5.3 | Invalid input | Enter `ht tp://`, ``, `javascript:alert(1)`, `-bad-` | Inline error; nothing added | 🔴 |
 | 5.4 | Normalization | Enter `HTTPS://Twitter.Com ` | Stored as `twitter.com` | 🟢 |
-| 5.5 | Toggle blocker off | Toggle "Blocking" off | Blocked sites no longer redirect during focus | 🟢 |
+| 5.5 | Blocker off stops redirects | With focus active, ensure `adhd_blocked_sites_active` is `false` (the toggle itself is only reachable outside focus — the focus screen hides the nav) | No redirect — the SW guards on the blocker flag | 🟢 |
 | 5.6 | Persistence | Add site, close/reopen popup | Site still listed | 🔴 |
 | 5.7 | Remove | Remove a site | Gone immediately; toast confirms | 🟢 |
 | 5.8 | Long list | Add 8+ sites | List scrolls/collapses with "Show all" control | 📱 |
@@ -135,7 +135,7 @@ Fixtures for import tests live in `scripts/e2e/test-fixtures/` (see §8).
 | 6.7 | Delete + undo | Delete a session | Card removed; toast "Undo" appears | 🔴 |
 | 6.8 | Undo within 5s | Click "Undo" | Session comes back exactly as before | 🔴 |
 | 6.9 | Undo after 5s | Wait >5s | Toast gone; session stays deleted | ⚠️ |
-| 6.10 | Rename | Edit a session name | Persists after reopen | 🟢 |
+| 6.10 | Rename | ✏️ on a session card → inline input → Save | Persists after reopen | 🟢 |
 | 6.11 | 🔴 50-session cap | Try to save #51 | Blocked with clear message; existing sessions intact | 🔴 |
 | 6.12 | Save with zero tabs | "Save session" with no open tabs | Disabled or clear "no tabs" message | ⚠️ |
 
@@ -178,7 +178,7 @@ Fixtures for import tests live in `scripts/e2e/test-fixtures/` (see §8).
 |---|---|---|---|---|
 | 9.1 | Close all confirm | Click "Close all tabs" | Confirmation modal appears | 🟢 |
 | 9.2 | Modal Esc | Press Escape in modal | Modal closes, nothing closed | 🟢 |
-| 9.3 | Modal focus trap | Tab inside modal | Focus stays within modal until dismissed | ⚠️ |
+| 9.3 | Modal focus trap | Tab inside modal | Focus stays within modal until dismissed (implemented: Tab/Shift+Tab wrap) | ⚠️ |
 | 9.4 | Confirm | Confirm close-all | All tabs close; undo available | 🔴 |
 | 9.5 | Undo close-all | Click Undo | All tabs restored | 🔴 |
 
@@ -242,13 +242,15 @@ Run the whole suite in Firefox (`about:debugging` → Load Temporary Add-on → 
 
 Before tagging v1.0.0:
 
-- [ ] `pnpm lint` → 0 problems
-- [ ] `pnpm test` → all pass (238)
-- [ ] `pnpm build:all` → clean
-- [ ] `pnpm lint:firefox` → 0 errors
-- [ ] `node scripts/e2e/chrome-e2e.mjs` → 32/32
-- [ ] Sections 1–12 manually verified (at least 🔴 items)
-- [ ] `git status` clean; version bumped; README updated
+- [x] `pnpm lint` → 0 problems
+- [x] `pnpm test` → all pass (248)
+- [x] `pnpm build:all` → clean
+- [x] `pnpm lint:firefox` → 0 errors
+- [x] `node scripts/e2e/chrome-e2e.mjs` → 32/32
+- [x] `node scripts/e2e/manual-test.mjs` → 74/74 (see `docs/manual-test-results.md`)
+- [x] Sections 1–11 machine-verified (all 🔴 items green)
+- [ ] Section 12 Firefox parity + toolbar/notification/file-picker — human pass required
+- [x] `git status` clean; version bumped; README updated
 - [ ] (Optional) Tag `v1.0.0`
 
 ---

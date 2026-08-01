@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pause and breathe</title>
+    <!--
+      Focus-mode interstitial. Served as a real extension page (a data: URL is
+      no longer reliably navigable via chrome.tabs.update in current Chrome),
+      so the service worker redirects blocked tabs here with ?blocked=<domain>.
+      External assets only — MV3 CSP forbids inline scripts/styles.
+    -->
+    <link rel="stylesheet" href="interstitial.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">🧘</div>
+      <h1>Pause and breathe</h1>
+      <p>
+        You were heading to <span class="domain" id="domain">this site</span>
+      </p>
+      <p>Is this intentional? You're in focus mode right now.</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="go-back">Go Back</button>
+        <button class="btn btn-secondary" id="continue">It's intentional</button>
+      </div>
+    </div>
+    <script src="interstitial.js"></script>
+  </body>
+</html>

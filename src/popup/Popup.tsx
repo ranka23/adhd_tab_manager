@@ -182,8 +182,8 @@ export const Popup: React.FC = () => {
       });
       setFocusMode(newFocusState);
 
-      // Activate the blocker
-      await blockedSites.toggleActive();
+      // Force the blocker on (not a toggle — focus mode always enables it).
+      await blockedSites.activate();
     } finally {
       isTogglingFocus.current = false;
     }
@@ -211,10 +211,8 @@ export const Popup: React.FC = () => {
       });
       setFocusMode(newFocusState);
 
-      // Deactivate the blocker
-      if (blockedSites.isActive) {
-        await blockedSites.toggleActive();
-      }
+      // Force the blocker off (not a conditional toggle — focus end always disables it).
+      await blockedSites.deactivate();
 
       // Reload stats
       const stats = await sessionService.getDailyStats();
@@ -270,13 +268,36 @@ export const Popup: React.FC = () => {
 
     // Focus the destructive action so keyboard users can confirm quickly
     const confirmButton = confirmDialogRef.current?.querySelector<HTMLButtonElement>(
-      '.btn--primary',
+      '.btn-primary',
     );
     confirmButton?.focus();
 
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         setCloseAllConfirm(null);
+        return;
+      }
+
+      // Trap Tab focus inside the dialog so keyboard users can't tab out.
+      if (e.key === 'Tab' && confirmDialogRef.current) {
+        const focusable = Array.from(
+          confirmDialogRef.current.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => !el.hasAttribute('disabled'));
+        if (focusable.length === 0) return;
+
+        const first = focusable[0]!;
+        const last = focusable[focusable.length - 1]!;
+        const active = document.activeElement as HTMLElement | null;
+
+        if (e.shiftKey && (active === first || !confirmDialogRef.current.contains(active))) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !confirmDialogRef.current.contains(active))) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -362,8 +383,9 @@ export const Popup: React.FC = () => {
   /** Handles adding a blocked site with success toast */
   const handleAddBlockedSite = useCallback(
     async (domain: string) => {
+      const alreadyBlocked = blockedSites.sites.some((s) => s.domain === domain);
       await blockedSites.addSite(domain);
-      showToast('Site added to block list! 🛡️');
+      showToast(alreadyBlocked ? 'Site already blocked 🛡️' : 'Site added to block list! 🛡️');
     },
     [blockedSites, showToast],
   );
@@ -691,6 +713,7 @@ export const Popup: React.FC = () => {
                       onSave={handleSessionSave}
                       onRestore={handleSessionRestore}
                       onDelete={handleSessionDelete}
+                      onRename={sessions.rename}
                       onUndoClose={tabs.undoCloseTab}
                     />
                   </div>

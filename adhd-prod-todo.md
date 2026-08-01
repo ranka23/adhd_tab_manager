@@ -8,7 +8,7 @@
 
 ## ✅ Implementation Status (updated 2026-08-01)
 
-All tasks below have been **implemented and verified**: `pnpm build` ✅ (no warnings), `pnpm lint` ✅ (clean), `pnpm test` ✅ **238 tests / 14 files pass**, `pnpm lint:firefox` ✅ (0 errors), and a **real-browser e2e run: 32/32 checks pass** (see §9). Firefox support (MV3 event page), the cross-browser `browser` shim, the popup-heartbeat fallback, and responsive layouts were added in the same pass — see §§8–13.
+All tasks below have been **implemented and verified**: `pnpm build` ✅ (no warnings), `pnpm lint` ✅ (clean), `pnpm test` ✅ **248 tests / 15 files pass**, `pnpm lint:firefox` ✅ (0 errors), a **real-browser e2e run: 32/32 checks pass** (see §9), and a **full manual-test run: 74/74 checks pass** (see §15 and `docs/manual-test-results.md`). Firefox support (MV3 event page), the cross-browser `browser` shim, the popup-heartbeat fallback, and responsive layouts were added in the same pass — see §§8–13.
 
 **Editor lint note:** the typed-linting error on `vite.config.ts` ("TSConfig does not include this file") is fully resolved: `tsconfig.eslint.json` lists the root config files, `.eslintrc.cjs` now sets an **explicit absolute `tsconfigRootDir`** (so typed linting resolves identically regardless of the cwd ESLint is launched from — CLI vs editor language server), and non-TS files (`scripts/**/*.mjs`, `public/*.js`) opt out of typed linting via `parserOptions: { project: null }` overrides. `pnpm lint` now covers the **whole project** (`eslint . --ext .ts,.tsx,.mjs,.js`) and exits 0. If an old error still shows in the editor, restart the ESLint/TypeScript language servers (or reload the workspace) — it's stale server state, not a config problem.
 
@@ -21,8 +21,15 @@ All tasks below have been **implemented and verified**: `pnpm build` ✅ (no war
 | 5 | All component/animation colors → design tokens; modernized UI; `@import` order fixed | ✅ Done | `popup.css`, `components.css`, `animations.css` |
 | 6 | Dead `FocusStats` removed; `sessionsSaved` stat wired; `MAX_SESSIONS` enforced | ✅ Done | deleted component, `sessionService.ts`, `tabService.ts` |
 | 7 | Modal Escape + focus management (a11y) | ✅ Done | `Popup.tsx` |
-| 8 | Build / lint / test green | ✅ Done | 238 tests |
+| 8 | Build / lint / test green | ✅ Done | 248 tests |
 | 9 | Fix typed-linting for root config files (vite.config.ts not in `tsconfig.eslint.json`) | ✅ Done | `tsconfig.eslint.json` include + CLI-verified |
+| 10 | Focus redirect → real interstitial page (data: URLs no longer commit via `tabs.update`) | ✅ Done | `public/interstitial.{html,css,js}`, `service-worker.ts` |
+| 11 | Blocker toggle respected during focus (SW guard) + force-activate/deactivate | ✅ Done | `service-worker.ts`, `Popup.tsx`, `useBlockedSites.ts` |
+| 12 | Timer settings reject NaN; day-aware pomodoro streak | ✅ Done | `PomodoroTimer.tsx`, `timerService.ts` (+4 tests) |
+| 13 | 50-session cap blocks with a message (no silent drop); rename UI added | ✅ Done | `SessionSaver.tsx` |
+| 14 | Close-all modal: real focus trap + initial-focus selector fix | ✅ Done | `Popup.tsx` |
+| 15 | Theme zero-flash: synchronous localStorage preload mirror + `storage.onChanged` sync | ✅ Done | `public/theme-preload.js`, `utils/theme.ts` |
+| 16 | Manual-test driver: 74/74 checks against real Chrome (incl. SW-tick, import round-trip, focus trap) | ✅ Done | `scripts/e2e/manual-test.mjs`, `docs/manual-test-results.md` |
 
 Manual testing checklist: see **Section 6** below.
 
@@ -303,3 +310,22 @@ A persistent, extension-loaded test environment is built and verified:
 - **Firefox smoke (real Firefox 152):** `web-ext run` loads `dist-firefox` as a temporary add-on; the add-on's IndexedDB (`storage/default/moz-extension+++…/idb`) contains the seeded defaults (`reddit.com`, `youtube`) proving the event page + `onInstalled` migration ran.
 
 **Manual test sessions verified today:** Chrome e2e harness 32/32; interactive smoke pass; Firefox load + storage-seed pass. Everything else in `docs/manual-test-plan.md` is the human checklist.
+
+---
+
+## 15. Manual Test Execution — 74/74 PASS (added 2026-08-01, afternoon)
+
+`node scripts/e2e/manual-test.mjs` now **spawns its own Chrome for Testing** (fresh temp profile, port 9334) and drives the REAL popup over CDP — real button clicks, real inputs, real tabs, real storage, real service worker — executing the plan's §1–§11 matrix plus the 60 s SW-tick check (`MANUAL_TEST_SLOW=1`):
+
+- **74/74 checks PASS** (21 🔴 must-pass all green); details in `docs/manual-test-results.md`, raw data in `artifacts/manual/results.json`, screenshots in `artifacts/manual/`.
+- 🔴 Fixes this pass surfaced (all verified end-to-end):
+  1. Focus redirects used a `data:` URL, which current Chrome silently refuses to commit via `tabs.update` → replaced with a real interstitial extension page (`public/interstitial.*`).
+  2. SW redirect ignored the blocker on/off toggle → now guards on `adhd_blocked_sites_active`; focus start/end force-activate/deactivate (was a flip that could desync).
+  3. Timer settings accepted `NaN` (e.g. `1e`) → `Number.isFinite` guards.
+  4. Session cap silently dropped the oldest session → clear blocked message at 50.
+  5. Close-all modal had no focus trap and its initial-focus selector never matched → real trap + selector fix.
+  6. Pomodoro streak never reset → day-aware via `adhd_last_pomodoro_date`.
+  7. Theme preload applied theme async (flash window) → synchronous localStorage cache mirror.
+  8. Blocker input rejected pasted URLs and gave no duplicate feedback → normalize-then-validate + "already blocked" toast.
+  9. Session rename had no UI → inline ✏️ editor.
+- Remaining human-only checks (documented): toolbar popup interaction, macOS notification banner, Firefox §12 interactive pass, native file-picker click.

@@ -34,8 +34,21 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
     'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
   },
-  ignorePatterns: ['dist', 'dist-firefox', 'coverage', 'artifacts', 'node_modules', '.eslintrc.cjs'],
+  ignorePatterns: ['dist', 'dist-firefox', 'coverage', 'artifacts', 'node_modules', '!.eslintrc.cjs'],
   overrides: [
+    // This config file itself is CJS (module.exports), not part of the
+    // tsconfig program. Lint it with plain parsing and Node globals so the
+    // editor doesn't report it as ignored-by-default.
+    {
+      files: ['.eslintrc.cjs'],
+      parserOptions: { project: null },
+      env: { node: true },
+      rules: {
+        // CJS config files legitimately use require().
+        '@typescript-eslint/no-require-imports': 'off',
+        '@typescript-eslint/no-var-requires': 'off',
+      },
+    },
     // Node build/test/script files: plain ESM, not part of any tsconfig
     // program, so disable type-aware (project) parsing for them. Rules tuned
     // for a typed React codebase are relaxed here: console output is the CLI

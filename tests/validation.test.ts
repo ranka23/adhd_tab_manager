@@ -4,9 +4,10 @@
  */
 import { describe, it, expect } from 'vitest';
 import { validateBackupData } from '../src/popup/utils/validation';
+import type { BlockedSite, TabInfo, TabSession, TimerSettings } from '../src/popup/types';
 
 /** Builds a minimal valid TabInfo fixture */
-const makeTab = (overrides: Partial<{ id: number; url: string }> = {}) => ({
+const makeTab = (overrides: Partial<Pick<TabInfo, 'id' | 'url'>> = {}): TabInfo => ({
   id: overrides.id ?? 1,
   url: overrides.url ?? 'https://example.com',
   title: 'Example',
@@ -18,7 +19,7 @@ const makeTab = (overrides: Partial<{ id: number; url: string }> = {}) => ({
 });
 
 /** Builds a minimal valid TabSession fixture */
-const makeSession = (overrides: Partial<{ id: string; name: string }> = {}) => ({
+const makeSession = (overrides: Partial<Pick<TabSession, 'id' | 'name'>> = {}): TabSession => ({
   id: overrides.id ?? 's1',
   name: overrides.name ?? 'Work',
   createdAt: 1700000000000,
@@ -28,13 +29,13 @@ const makeSession = (overrides: Partial<{ id: string; name: string }> = {}) => (
 });
 
 /** Builds a minimal valid BlockedSite fixture */
-const makeBlockedSite = (overrides: Partial<{ domain: string }> = {}) => ({
+const makeBlockedSite = (overrides: Partial<Pick<BlockedSite, 'domain'>> = {}): BlockedSite => ({
   domain: overrides.domain ?? 'reddit.com',
   addedAt: 1700000000000,
 });
 
 /** Minimal valid TimerSettings */
-const makeTimerSettings = () => ({
+const makeTimerSettings = (): TimerSettings => ({
   workMinutes: 25,
   shortBreakMinutes: 5,
   longBreakMinutes: 15,

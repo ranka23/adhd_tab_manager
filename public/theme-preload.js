@@ -12,7 +12,7 @@
     var dark = false;
     try {
       dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    } catch (e) {
+    } catch (_e) {
       /* matchMedia unavailable — stay light */
     }
     try {
@@ -22,11 +22,11 @@
         else if (saved === 'light') dark = false;
         document.documentElement.dataset.theme = dark ? 'dark' : 'light';
       });
-    } catch (e) {
+    } catch (_e) {
       /* chrome.storage unavailable (e.g. plain browser preview) — use OS default */
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     }
-  } catch (e) {
+  } catch (_e) {
     /* Never block rendering */
   }
 })();

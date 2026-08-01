@@ -1,4 +1,6 @@
 /** @type {import('eslint').Linter.Config} */
+const path = require('path');
+
 module.exports = {
   root: true,
   env: {
@@ -10,6 +12,9 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
+    // Explicit absolute root so typed linting resolves the same regardless
+    // of the cwd ESLint is launched from (CLI vs editor language server).
+    tsconfigRootDir: path.resolve(__dirname),
     project: ['./tsconfig.eslint.json'],
     ecmaFeatures: {
       jsx: true,
@@ -29,5 +34,37 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
     'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
   },
-  ignorePatterns: ['dist', 'node_modules', '.eslintrc.cjs'],
+  ignorePatterns: ['dist', 'dist-firefox', 'coverage', 'artifacts', 'node_modules', '.eslintrc.cjs'],
+  overrides: [
+    // Node build/test/script files: plain ESM, not part of any tsconfig
+    // program, so disable type-aware (project) parsing for them. Rules tuned
+    // for a typed React codebase are relaxed here: console output is the CLI
+    // interface, and `ok ? pass() : fail()` assertion ternaries are idiomatic.
+    {
+      files: ['scripts/**/*.mjs'],
+      parserOptions: { project: null },
+      env: { node: true },
+      rules: {
+        'no-console': 'off',
+        'no-unused-expressions': 'off',
+        '@typescript-eslint/no-unused-expressions': 'off',
+        'no-empty': 'off',
+        '@typescript-eslint/explicit-function-return-type': 'off',
+      },
+    },
+    // Browser-side plain JS loaded by extension pages (MV3 CSP forbids
+    // inline scripts). Same treatment: no tsconfig program to type-check.
+    {
+      files: ['public/*.js'],
+      parserOptions: { project: null },
+      env: { browser: true, webextensions: true },
+      rules: {
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/no-unused-vars': [
+          'error',
+          { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+        ],
+      },
+    },
+  ],
 };

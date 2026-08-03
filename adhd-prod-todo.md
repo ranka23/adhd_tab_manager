@@ -518,3 +518,18 @@ New lasting e2e script `scripts/e2e/donate-smoke.mjs` drives the live Chrome (CD
   `.DS_Store`; Safari zip carries no `side_panel` key.
 - Docs updated: `store-listing-firefox.md` (id resolved section), `RELEASE-NOTES.md`
   (submission status + safe zip command without `rm -rf`).
+
+## 22. Gecko id switched to developer email, Safari on hold (added 2026-08-03)
+
+- **Firefox AMO gecko id changed** `adhd-tab-manager@ranka23.github.io` →
+  **`nikhil@onefamili.com`** (developer's contact email, per project owner) in
+  `scripts/build-firefox.mjs`. Rebuilt `pnpm build:all`; `pnpm lint:firefox` →
+  0 errors (2 benign warnings). Firefox zip regenerated and verified to carry
+  `"id": "nikhil@onefamili.com"`; Chrome/Edge/Safari zips also re-zipped from
+  the fresh build (Chrome zip verified: MV3 + `side_panel` default surface).
+- **Safari is ON HOLD** — developer does not have the Apple Developer license
+  ($99/yr) yet. The wrapper + unsigned build stay at `artifacts/release/safari/`
+  for when they're ready; no Safari work blocks Chrome/Edge/Firefox submission.
+- Docs updated: `store-listing-firefox.md` + `RELEASE-NOTES.md` reflect the new
+  id and Safari hold status.
+- Commit: `a094fb6` was the previous batch; this batch is committed separately.

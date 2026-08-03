@@ -1,5 +1,9 @@
 # 🧠 ADHD Tab Manager
 
+[![CI](https://github.com/ranka23/adhd_tab_manager/actions/workflows/ci.yml/badge.svg)](https://github.com/ranka23/adhd_tab_manager/actions/workflows/ci.yml)
+[![Release](https://github.com/ranka23/adhd_tab_manager/actions/workflows/release.yml/badge.svg)](https://github.com/ranka23/adhd_tab_manager/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > A browser extension designed specifically for ADHD brains — minimal clutter,
 > one action at a time, dopamine-friendly tab management. Free, open source,
 > and donation-supported. 💜
@@ -102,6 +106,26 @@ no floating popup); Safari uses the classic toolbar popup.
 
 ---
 
+## 📸 Screenshots
+
+The side panel — the default surface on Chrome, Edge and Firefox:
+
+![Side panel](docs/screenshots/sidepanel-1280x800.png)
+
+Home tab with live tabs grouped by window and the daily Tao Te Ching quote:
+
+![Home light](docs/screenshots/home-light-1280x800.png)
+![Home dark](docs/screenshots/home-dark-640x400.png)
+
+Tabs grouped by window · Saved sessions · Pomodoro timer · Distraction blocker:
+
+![Tabs by window](docs/screenshots/tabs-multiwindow-1280x800.png)
+![Sessions](docs/screenshots/sessions-640x400.png)
+![Timer](docs/screenshots/timer-running-640x400.png)
+![Blocker](docs/screenshots/blocked-sites-640x400.png)
+
+---
+
 ## 🚀 Installation (from the stores — coming soon)
 
 The extension is being submitted to the Chrome Web Store, Edge Add-ons,
@@ -191,6 +215,15 @@ A full human-verifiable test plan (sections 1–16, ~90 checks) lives in
 [`docs/manual-test-plan.md`](docs/manual-test-plan.md) — render, theme, focus
 mode, blocker, sessions, undo-close, Pomodoro, quick actions, export/import,
 responsive/mobile widths, Firefox parity, side panel and donations.
+
+### Release & publishing (CI)
+
+Pushing a `v*` tag triggers [GitHub Actions](.github/workflows/release.yml):
+build all targets → create the 4 store zips → attach zips + screenshots to a
+GitHub Release → publish to Chrome Web Store and Firefox AMO (when the
+secrets are configured). See
+[`docs/release-publishing.md`](docs/release-publishing.md) for the one-time
+setup and what each store's API can automate.
 
 ---
 

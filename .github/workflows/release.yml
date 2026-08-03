@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Build zips + GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all targets (Chrome + Firefox + Safari)
+        run: |
+          pnpm build:all
+          node scripts/build-safari.mjs
+
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create store zips
+        run: node scripts/release/create-zips.mjs "${{ steps.version.outputs.version }}"
+
+      - name: Build release body
+        run: |
+          {
+            echo '**Declutter your browser and stay focused. Save sessions, block distractions, and track focus with a Pomodoro timer.**'
+            echo ''
+            echo 'Store zips for **Chrome**, **Edge**, **Firefox** and **Safari** are attached below. Open source (MIT), no data collection, donation-supported.'
+            echo ''
+            echo '## 📸 Screenshots'
+            echo ''
+            for f in home-light-1280x800 home-dark-640x400 tabs-multiwindow-1280x800 sessions-640x400 timer-running-640x400 blocked-sites-640x400 sidepanel-1280x800; do
+              echo "![$f](https://github.com/ranka23/adhd_tab_manager/releases/download/${GITHUB_REF_NAME}/$f.png)"
+            done
+          } > /tmp/release-body.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            artifacts/release/zips/*.zip \
+            docs/screenshots/*.png \
+            --title "ADHD Tab Manager v${{ steps.version.outputs.version }}" \
+            --notes-file /tmp/release-body.md
+
+  publish-firefox:
+    name: Publish to Firefox AMO
+    needs: package
+    runs-on: ubuntu-latest
+    if: ${{ secrets.AMO_JWT_ISSUER != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Firefox target
+        run: pnpm build:all
+
+      - name: Sign & submit to AMO (listed = public review)
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          pnpm exec web-ext sign \
+            --source-dir dist-firefox \
+            --api-key "$AMO_JWT_ISSUER" \
+            --api-secret "$AMO_JWT_SECRET" \
+            --channel listed
+
+      - name: Update AMO listing text (summary, description, links)
+        if: ${{ secrets.AMO_ADDON_SLUG != '' }}
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          AMO_ADDON_SLUG: ${{ secrets.AMO_ADDON_SLUG }}
+        run: node scripts/release/update-amo-listing.mjs
+
+  publish-chrome:
+    name: Publish to Chrome Web Store
+    needs: package
+    runs-on: ubuntu-latest
+    if: ${{ secrets.CWS_CLIENT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build + zip
+        run: |
+          pnpm build:all
+          node scripts/release/create-zips.mjs
+
+      - name: Upload + publish to Chrome Web Store
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_ITEM_ID: ${{ secrets.CWS_ITEM_ID }}
+        run: node scripts/release/publish-chrome.mjs

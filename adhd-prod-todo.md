@@ -533,3 +533,31 @@ New lasting e2e script `scripts/e2e/donate-smoke.mjs` drives the live Chrome (CD
 - Docs updated: `store-listing-firefox.md` + `RELEASE-NOTES.md` reflect the new
   id and Safari hold status.
 - Commit: `a094fb6` was the previous batch; this batch is committed separately.
+
+## 23. CI/CD — auto zips + store publishing + screenshots (added 2026-08-03)
+
+- **Screenshots committed** to `docs/screenshots/` (13 PNGs, ~1 MB) so they render
+  on the GitHub page (new README 📸 section) and are attachable to releases.
+  Canonical listing copy moved to committed `docs/STORE-LISTING.md` +
+  `docs/store-listing.json` (machine-readable: name, short description, Firefox
+  summary, keywords, full description, screenshot captions).
+- **`.github/workflows/ci.yml`** — lint + 280 tests + build + `lint:firefox` on
+  every push/PR to `main`.
+- **`.github/workflows/release.yml`** — on `v*` tag push: build all targets →
+  `scripts/release/create-zips.mjs` (4 store zips) → `gh release create` with
+  zips + all screenshots as assets + generated body with embedded screenshots.
+  Then two gated publish jobs (run only when secrets exist):
+  - `publish-firefox`: `web-ext sign` (listed) + `update-amo-listing.mjs`
+    (AMO v5 API PATCH — summary, description, homepage, support URL).
+  - `publish-chrome`: `publish-chrome.mjs` (CWS OAuth refresh token → upload →
+    publish target default).
+- **Honest scope:** CWS has no API for listing text/screenshots (set once in the
+  dashboard; CI keeps it on version bumps). Edge has no publish API at all (zip
+  is on the GitHub Release for manual upload). AMO listing text IS automatable.
+- **Guide:** `docs/release-publishing.md` — full one-time setup for Chrome
+  (OAuth client, refresh-token flow, first manual upload for item id) and
+  Firefox (AMO API key/secret, first manual submission, slug), Edge manual
+  steps, local dry-run commands, troubleshooting.
+- Verified locally: YAML parses (ruby), all new scripts `node --check` clean,
+  `pnpm lint` 0, `create-zips.mjs` regenerates all 4 zips, release-body shell
+  snippet produces correct markdown.

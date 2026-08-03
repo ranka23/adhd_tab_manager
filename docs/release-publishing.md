@@ -70,48 +70,92 @@ Add GitHub secrets (repo → **Settings → Secrets and variables → Actions**)
 ## 4. One-time setup — Chrome Web Store (30 minutes)
 
 The CWS API uses Google OAuth2. You do this once; CI reuses the refresh token
-forever.
+forever. These steps match the **current Google Cloud console UI** (the
+"Google Auth Platform" sidebar).
 
-1. **Google Cloud project** → https://console.cloud.google.com/ → create a
-   project (or reuse one) → **APIs & Services → Library** → enable
-   **Chrome Web Store API**.
-2. **OAuth consent screen**: External → fill app name, support email → add the
-   test scope if asked.
-3. **Credentials → Create credentials → OAuth client ID** → Application type
-   **Desktop app** → note the **Client ID** and **Client secret**.
-4. **Generate a refresh token** (one-time, needs your Google account):
-   ```sh
-   # 1) open this in a browser, sign in, approve:
-   # https://accounts.google.com/o/oauth2/v2/auth?client_id=CLIENT_ID&redirect_uri=http://localhost&response_type=code&scope=https://www.googleapis.com/auth/chromewebstore&access_type=offline&prompt=consent
-   # 2) it redirects to http://localhost/?code=AUTH_CODE — copy AUTH_CODE:
-   curl -s -X POST "https://oauth2.googleapis.com/token" \
-     -d "client_id=CLIENT_ID" \
-     -d "client_secret=CLIENT_SECRET" \
-     -d "code=AUTH_CODE" \
-     -d "grant_type=authorization_code" \
-     -d "redirect_uri=http://localhost"
-   # 3) the response contains "refresh_token": "..." — save it
-   ```
-5. **Upload the extension to the dashboard once manually** to get the item id:
-   https://chrome.google.com/webstore/devconsole/ → **Add new item** → upload
-   the chrome zip → the item page URL contains
-   `…/edit/<32-char-id>` — that's your `CWS_ITEM_ID`. (Or call the API
-   `POST /items` once, but the dashboard is easier.)
-6. Set the **listing text + screenshots once** in the dashboard (copy from
-   `docs/STORE-LISTING.md` + `docs/screenshots/`).
-7. Set the **privacy policy URL** (required field on the item edit page) to:
-   `https://github.com/ranka23/adhd_tab_manager/blob/main/docs/PRIVACY-POLICY.md`
-   (full copy in `docs/store-privacy-practices.md` §4 — the policy is committed
-   at `docs/PRIVACY-POLICY.md`).
+> ✅ Done already: **Chrome Web Store API enabled** —
+> **APIs & Services → Library** → search **Chrome Web Store API** → **Enable**.
 
-Add GitHub secrets:
+### 4a. Configure the OAuth consent screen (Google Auth Platform → Audience)
+
+1. In the project at https://console.cloud.google.com/, open the left sidebar →
+   **Google Auth Platform** (top-level item; replaces the old "OAuth consent
+   screen").
+2. Click the **Audience** tab → **Get started** (if first time).
+3. **User type: External** → **Create**.
+4. Fill:
+   - **App name:** `ADHD Tab Manager`
+   - **User support email:** your email
+   - (Scopes can stay as-is; the `chromewebstore` scope is added implicitly
+     when the client is used. No sensitive scopes → **no verification**.)
+5. **Developer contact information:** your email → **Save and continue**.
+6. **Publishing status** (top of the Audience page):
+   - For a **long-lived** refresh token (so CI never breaks), switch to
+     **In production** → **Confirm**.
+   - If you leave it **Testing**, refresh tokens expire **after 7 days** and
+     you must add your Google account under **Test users** (the account that
+     approves the token step in 4c) — tokens then need re-generating weekly.
+     In production this is not needed.
+
+### 4b. Create the OAuth client (Google Auth Platform → Clients)
+
+1. Left sidebar → **Google Auth Platform → Clients** → **Create client**.
+2. **Application type:** `Desktop app` (under *Desktop*).
+3. **Name:** `adhd-tab-manager-ci` → **Create**.
+4. Copy the **Client ID** and **Client secret** (secret is shown once — if you
+   lose it, edit the client → **Download JSON** contains both).
+   These become `CWS_CLIENT_ID` and `CWS_CLIENT_SECRET`.
+
+### 4c. Generate a refresh token (one-time, needs your Google account)
+
+```sh
+# 1) open this in a browser, sign in (with the account from 4a), approve:
+# https://accounts.google.com/o/oauth2/v2/auth?client_id=CLIENT_ID&redirect_uri=http://localhost&response_type=code&scope=https://www.googleapis.com/auth/chromewebstore&access_type=offline&prompt=consent
+# 2) it redirects to http://localhost/?code=AUTH_CODE — copy AUTH_CODE:
+curl -s -X POST "https://oauth2.googleapis.com/token" \
+  -d "client_id=CLIENT_ID" \
+  -d "client_secret=CLIENT_SECRET" \
+  -d "code=AUTH_CODE" \
+  -d "grant_type=authorization_code" \
+  -d "redirect_uri=http://localhost"
+# 3) the response contains "refresh_token": "..." — save it
+```
+
+If the consent page says *"Google hasn't verified this app"*, click
+**Advanced → Continue** — normal for an unverified but harmless client.
+
+### 4d. Get the item id (Chrome Web Store dashboard, one manual upload)
+
+1. Go to https://chrome.google.com/webstore/devconsole/ → **Add new item** →
+   upload the chrome zip (`artifacts/release/zips/adhd-tab-manager-chrome-1.0.0.zip`).
+2. The item page URL contains `…/edit/<32-char-id>` — that 32-char id is
+   your `CWS_ITEM_ID`. (It never changes across version uploads.)
+3. Set the **listing text + screenshots once** (copy from
+   `docs/STORE-LISTING.md` + `docs/screenshots/`) and the **privacy policy
+   URL**: `https://github.com/ranka23/adhd_tab_manager/blob/main/docs/PRIVACY-POLICY.md`
+   (full copy in `docs/store-privacy-practices.md` §4).
+
+### 4e. Add the secrets to GitHub
+
+**GitHub → repo → Settings → Secrets and variables → Actions → New
+repository secret** (add each of these):
 
 | Secret | Value |
 |---|---|
-| `CWS_CLIENT_ID` | OAuth client id |
-| `CWS_CLIENT_SECRET` | OAuth client secret |
-| `CWS_REFRESH_TOKEN` | refresh token from step 4 |
-| `CWS_ITEM_ID` | 32-char extension id from step 5 |
+| `CWS_CLIENT_ID` | OAuth client id from 4b |
+| `CWS_CLIENT_SECRET` | OAuth client secret from 4b |
+| `CWS_REFRESH_TOKEN` | refresh token from 4c |
+| `CWS_ITEM_ID` | 32-char extension id from 4d |
+
+When all four exist, the `publish-chrome` job in `.github/workflows/release.yml`
+activates automatically (it runs `if: secrets.CWS_CLIENT_ID != ''`).
+
+### 4f. Local dry-run (optional, before trusting CI)
+
+```sh
+CWS_CLIENT_ID=... CWS_CLIENT_SECRET=... CWS_REFRESH_TOKEN=... \
+CWS_ITEM_ID=... node scripts/release/publish-chrome.mjs
+```
 
 ---
 

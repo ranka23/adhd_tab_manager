@@ -115,9 +115,6 @@ export const DonateCard: React.FC = () => {
   return (
     <div className="donate-card">
       <div className="donate-card__header">
-        <span className="donate-card__icon" role="img" aria-label="coffee">
-          ☕
-        </span>
         <div className="donate-card__text">
           <h3 className="donate-card__title">Support the Project</h3>
           <p className="donate-card__subtitle">

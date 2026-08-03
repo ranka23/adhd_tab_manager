@@ -487,3 +487,11 @@ New lasting e2e script `scripts/e2e/donate-smoke.mjs` drives the live Chrome (CD
 - Replace the AMO `gecko.id` (`adhd-tab-manager@example.com`) with a real reverse-domain ID in `dist-firefox/manifest.json` before submitting to Firefox AMO.
 - Safari packaging still needs `safari-web-extension-packager` (≈1–2 days, no code changes).
 - Store screenshots can be captured from `artifacts/*.png`.
+
+## 20. Polish batch — flat feedback CTA, README wallets, repo rename (added 2026-08-03)
+
+- **Removed the icon** (📣) from the `FeedbackCard` header and the icon (☕) from the `DonateCard` header — both cards now render clean text-only titles. The ❤️ in the Donate button is kept intentionally.
+- **Flat “Open GitHub Issues” button**: `.feedback-card__button` now sets `border: none` (overrides `.btn--secondary`'s `1px solid var(--primary-border)`), matching the flat Donate CTA.
+- **README `💜 Donate` section** now lists the two public wallet addresses directly (ETH `0x907D…121A`, SOL `H9kw…Szyo`) so users can donate without opening the app.
+- **Repo renamed** `adhd-tab-manager` → **`adhd_tab_manager`** (GitHub API; old URL redirects). All in-repo references updated: `src/shared/constants.ts` (`SOURCE_URL`), `scripts/e2e/donate-smoke.mjs` (×2), `docs/manual-test-plan.md` (×2), `README.md` (Contributing). Git remote updated to `https://github.com/ranka23/adhd_tab_manager.git`.
+- Verification: lint 0 · tests 280/280 · build:all + build:safari clean · lint:firefox 0 errors · chrome-e2e 50/50 · manual-test 78/78 · sidepanel-smoke 15/15 · multiwindow-smoke 9/9 · donate-smoke 15/15 · diagnostics 0.

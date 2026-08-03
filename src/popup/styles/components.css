@@ -1657,4 +1657,5 @@
   justify-content: center;
   text-decoration: none;
   text-align: center;
+  border: none; /* flat CTA — no outline on the GitHub Issues button */
 }

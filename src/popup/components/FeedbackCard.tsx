@@ -21,9 +21,6 @@ export const FeedbackCard: React.FC = () => {
   return (
     <div className="feedback-card">
       <div className="feedback-card__header">
-        <span className="feedback-card__icon" role="img" aria-label="megaphone">
-          📣
-        </span>
         <div className="feedback-card__text">
           <h3 className="feedback-card__title">Request a Feature or Report a Bug</h3>
           <p className="feedback-card__subtitle">

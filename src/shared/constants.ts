@@ -117,7 +117,7 @@ export const DONATION_QR_SOL = 'donate/sol-address.jpg';
  * The open-source repository page shown in the donation modal footer.
  * ADHD Tab Manager is free and open source — donations help keep it alive.
  */
-export const SOURCE_URL = 'https://github.com/ranka23/adhd-tab-manager';
+export const SOURCE_URL = 'https://github.com/ranka23/adhd_tab_manager';
 
 /** GitHub Issues page — used by the "Request New Feature or Report a Bug" card. */
 export const ISSUES_URL = `${SOURCE_URL}/issues`;

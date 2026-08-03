@@ -179,7 +179,7 @@ try {
     issuesTab = await evalIn(
       cdp,
       sid,
-      `chrome.tabs.query({}).then(ts => ts.find(t => (t.url||'').includes('github.com/ranka23/adhd-tab-manager/issues')) || null)`,
+      `chrome.tabs.query({}).then(ts => ts.find(t => (t.url||'').includes('github.com/ranka23/adhd_tab_manager/issues')) || null)`
     );
     if (!issuesTab) await sleep(200);
   }
@@ -219,7 +219,7 @@ try {
   modal.addresses[0]?.startsWith('0x') && modal.addresses[1]?.length >= 40
     ? pass(`addresses shown: ETH ${modal.addresses[0].slice(0, 10)}…, SOL ${modal.addresses[1].slice(0, 8)}…`)
     : fail('addresses', JSON.stringify(modal.addresses));
-  modal.footer === 'Source Code' && modal.footerHref?.includes('github.com/ranka23/adhd-tab-manager')
+  modal.footer === 'Source Code' && modal.footerHref?.includes('github.com/ranka23/adhd_tab_manager')
     ? pass(`footer links to the open-source repo (${modal.footerHref})`)
     : fail('footer link', JSON.stringify(modal));
 

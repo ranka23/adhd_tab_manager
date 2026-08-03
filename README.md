@@ -253,7 +253,7 @@ redirects blocked sites to a local interstitial page — no remote calls.
 ## 🤝 Contributing
 
 Found a bug or want a feature? Open an
-[issue](https://github.com/ranka23/adhd-tab-manager/issues) — every report
+[issue](https://github.com/ranka23/adhd_tab_manager/issues) — every report
 helps make the extension better for everyone. PRs are welcome.
 
 ## 💜 Donate
@@ -262,6 +262,15 @@ ADHD Tab Manager is free and open source. If it helps you stay focused,
 consider a small donation — **Ethereum (ETH/USDC/USDT)** and **Solana (SOL)**
 are accepted via the **Donate** card on the Home tab (wallet QR codes + copy
 buttons). Every bit helps pay the bills and keep the project alive.
+
+**Ethereum (ETH/USDC/USDT):**
+`0x907DB6Ad294bD6B9adAE4C2340d34883E32F121A`
+
+**Solana (SOL):**
+`H9kw2HG3eik5uKYoULHuzohoY7gCi1Jfqk38ppn1Szyo`
+
+You can also send a donation directly to either wallet above — the same
+addresses shown in the app's Donate card.
 
 ## 📄 License
 

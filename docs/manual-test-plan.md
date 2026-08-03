@@ -309,7 +309,7 @@ addresses live in `src/shared/constants.ts` (`DONATION_ETH_ADDRESS`,
 | 15.7 | Cancel / Escape | Open modal → Esc | Modal closes; focus returns to the card button; nothing opens | 🟢 |
 | 15.8 | Overlay click | Open modal → click the dark overlay | Modal closes; clicking INSIDE the dialog does NOT close it | ⚠️ |
 | 15.9 | Focus trap | Tab through the modal | Focus stays inside the dialog until dismissed | ⚠️ |
-| 15.10 | Open-source link | Open modal → “Source Code” | Opens `https://github.com/ranka23/adhd-tab-manager` in a new tab (`target=_blank`, `rel=noreferrer`) | 🟢 |
+| 15.10 | Open-source link | Open modal → “Source Code” | Opens `https://github.com/ranka23/adhd_tab_manager` in a new tab (`target=_blank`, `rel=noreferrer`) | 🟢 |
 | 15.11 | Responsive | Repeat at 320px/400px | Card + modal fit; no overflow; modal scrolls internally if short | 📱 |
 
 ---
@@ -322,7 +322,7 @@ open-source repository.
 | # | Test | Steps | Expected | Type |
 |---|---|---|---|---|
 | 15b.1 | Placement | Open Home tab | “Request a Feature or Report a Bug” card is directly ABOVE the Donate card | 🟢 |
-| 15b.2 | Link target | Inspect the CTA | Points to `https://github.com/ranka23/adhd-tab-manager/issues` with `target=_blank` + `rel=noreferrer` | 🔴 |
+| 15b.2 | Link target | Inspect the CTA | Points to `https://github.com/ranka23/adhd_tab_manager/issues` with `target=_blank` + `rel=noreferrer` | 🔴 |
 | 15b.3 | Click | Click “Open GitHub Issues” | Exactly one new tab opens at the Issues page (no double-open) | 🟢 |
 | 15b.4 | Responsive | Repeat at 320px/400px | Card fits; no overflow | 📱 |
 

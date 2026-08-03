@@ -35,14 +35,14 @@ A Chrome Extension designed specifically for ADHD brains — minimal clutter, on
 - **Close Window** closes a single window's non-pinned tabs; **Close All** is window-aware with a per-window breakdown in the confirm dialog
 - Undo-close restores tabs into their original window
 
-### 📌 Side Panel (Chrome)
-- One click from the header (right of the light/dark toggle) opens the whole app in Chrome's side panel
-- Same features as the popup, in a persistent, resizable surface
-- The header icon reflects whether the panel is open; theme and state stay in sync across surfaces
-- Automatically hidden in Firefox (no side panel API there)
+### 📌 Side Panel (default surface — Chrome / Edge / Firefox)
+- **The toolbar button opens the side panel directly** — no floating popup (Chrome/Edge `sidePanel`, Firefox `sidebar_action`)
+- Same features as the popup in a persistent, resizable surface; theme and state stay in sync across surfaces
+- The Open-Tabs list fills the panel height and scrolls internally
+- **Safari** (no side panel API) keeps the classic toolbar popup — `pnpm build:safari` → `dist-safari/`
 
 ### 📊 Daily Motivation
-- Rotating calming quotes
+- Rotating **Tao Te Ching quotes** — each one cites its chapter and verse (e.g. “— Tao Te Ching, Ch. 8, v. 1”)
 - Daily progress stats
 - Focus time tracking
 - Encouraging messages based on activity
@@ -68,13 +68,11 @@ This extension follows ADHD-specific design principles:
 ### Setup
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Build both targets (Chrome dist/ + Firefox dist-firefox/)
+# Build all targets: dist/ (Chrome/Edge) + dist-firefox/ + dist-safari/
 pnpm build:all
+pnpm build:safari   # adds dist-safari/ (popup surface, no side panel)
 
-# Run unit/integration tests (267)
+# Run unit/integration tests (268)
 pnpm test
 
 # Lint
@@ -90,14 +88,18 @@ pnpm format
 ### Real-browser verification
 
 ```bash
-# Automated Chrome e2e (49 checks, headless, temp profile)
+# Automated Chrome e2e (50 checks, headless, temp profile)
 node scripts/e2e/chrome-e2e.mjs
 
-# Full manual-test matrix (77 checks, real clicks/tabs/windows/storage/SW)
+# Full manual-test matrix (78 checks, real clicks/tabs/windows/storage/SW)
 node scripts/e2e/manual-test.mjs
 
 # + the ~60s service-worker tick test (timer completes with popup closed)
 MANUAL_TEST_SLOW=1 node scripts/e2e/manual-test.mjs
+
+# Side-panel + multi-window smoke suites
+node scripts/e2e/sidepanel-smoke.mjs
+node scripts/e2e/multiwindow-smoke.mjs
 
 # Interactive environment for MCP-driven / human testing (Chrome for Testing :9222)
 node scripts/e2e/start-test-env.mjs
@@ -112,6 +114,9 @@ Results: `docs/manual-test-results.md`, `docs/manual-test-plan.md`, `adhd-prod-t
 3. Enable "Developer mode"
 4. Click "Load unpacked"
 5. Select the `dist/` directory
+6. Pin the extension and click the toolbar icon → the **side panel** opens (the default surface).
+   For Firefox use `about:debugging` → Load Temporary Add-on → `dist-firefox/manifest.json`
+   (the toolbar button opens the sidebar).
 
 ## Tech Stack
 
@@ -134,7 +139,7 @@ src/
 │   ├── types/      # TypeScript type definitions
 │   ├── utils/      # Helper functions and constants
 │   └── styles/     # CSS stylesheets
-├── sidepanel/      # Chrome side panel entry (reuses the popup app)
+├── sidepanel/      # Side panel entry — the DEFAULT surface on Chrome/Edge/Firefox
 ├── background/     # Service worker (background scripts)
 └── shared/         # Constants shared between popup and background
 ```

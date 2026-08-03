@@ -8,7 +8,7 @@
 
 ## ✅ Implementation Status (updated 2026-08-01)
 
-All tasks below have been **implemented and verified**: `pnpm build` ✅ (no warnings), `pnpm lint` ✅ (clean), `pnpm test` ✅ **267 tests / 15 files pass**, `pnpm lint:firefox` ✅ (0 errors), a **real-browser e2e run: 49/49 checks pass** (see §9), and a **full manual-test run: 77/77 pass (1 slow-skip)** (see §15 and `docs/manual-test-results.md`). Firefox support (MV3 event page), the cross-browser `browser` shim, the popup-heartbeat fallback, responsive layouts, the Chrome **side panel**, **live dynamic data**, and **multi-window support** were added in the same passes — see §§8–16.
+All tasks below have been **implemented and verified**: `pnpm build` ✅ (clean), `pnpm lint` ✅ (clean, whole project incl. scripts), `pnpm test` ✅ **268 tests / 15 files pass**, `pnpm lint:firefox` ✅ (0 errors), a **real-browser e2e run: 50/50 checks pass** (see §9), a **full manual-test run: 78/78 pass incl. the slow SW-tick check** (see §15), plus **sidepanel-smoke 14/14** and **multiwindow-smoke 9/9**. Firefox support (MV3 event page), the cross-browser `browser` shim, the popup-heartbeat fallback, responsive layouts, the Chrome **side panel**, **live dynamic data**, **multi-window support**, the **Tao Te Ching quotes**, the **new logo**, and the **side-panel-default surface** were added in the same passes — see §§8–17.
 
 **Editor lint note:** the typed-linting error on `vite.config.ts` ("TSConfig does not include this file") is fully resolved: `tsconfig.eslint.json` lists the root config files, `.eslintrc.cjs` now sets an **explicit absolute `tsconfigRootDir`** (so typed linting resolves identically regardless of the cwd ESLint is launched from — CLI vs editor language server), and non-TS files (`scripts/**/*.mjs`, `public/*.js`) opt out of typed linting via `parserOptions: { project: null }` overrides. `pnpm lint` now covers the **whole project** (`eslint . --ext .ts,.tsx,.mjs,.js`) and exits 0. If an old error still shows in the editor, restart the ESLint/TypeScript language servers (or reload the workspace) — it's stale server state, not a config problem.
 
@@ -34,6 +34,14 @@ All tasks below have been **implemented and verified**: `pnpm build` ✅ (no war
 | 18 | **Live dynamic data**: popup/side panel subscribe to `tabs.onCreated/onRemoved/onMoved/onActivated/onAttached/onDetached/onReplaced/onUpdated` (debounced) + `windows.onRemoved/onFocusChanged` + `storage.onChanged` (sessions, blocked sites, timer state, stats, focus state) — every surface updates instantly when tabs/windows change or the other surface writes | ✅ Done | `useTabs.ts`, `useSessions.ts`, `useBlockedSites.ts`, `useTimer.ts`, `Popup.tsx` |
 | 19 | **Multi-window support**: tabs grouped per window in the Tabs view (Window 1/2/…, current marked); Save session prompts which window(s) to snapshot (never silently merges all); Close All / Close Window window-aware (modal shows per-window breakdown); undo-close restores into the original window; Quick Actions show window count | ✅ Done | `tabService.ts`, `TabGroup.tsx`, `SessionSaver.tsx`, `QuickActions.tsx`, `Popup.tsx`, `utils/helpers.ts` |
 | 20 | Multi-window + live-data verification: e2e 49/49 (incl. §9c), manual-test §12 4/4, unit tests 267 | ✅ Done | `scripts/e2e/chrome-e2e.mjs`, `scripts/e2e/manual-test.mjs`, `tests/` |
+| 21 | **Tao Te Ching quotes** on the Home tab: 13 curated quotes, each rendered with its chapter + verse citation (“— Tao Te Ching, Ch. N, v. M”), tested | ✅ Done | `src/popup/utils/constants.ts`, `DailyQuote.tsx`, `tests/components/DailyQuote.test.tsx` |
+| 22 | **Close-Window multi-window picker**: with 2+ windows the Home “Close Window” action shows a chooser (Window 1/2/3 — tab count each, pinned stay open, undoable); single window closes directly. Escape + focus trap | ✅ Done | `QuickActions.tsx`, `Popup.tsx`, `tests/components/QuickActions.test.tsx` |
+| 23 | **Side panel full-height tab list**: `sidepanel.css` fluid flex chain, `.tab-group__list { flex:1; overflow-y:auto; overflow-x:hidden }` — list fills the panel and scrolls internally, verified in real Chrome (scrollHeight 1058 > client 556, no x-overflow) | ✅ Done | `src/sidepanel/sidepanel.css` |
+| 24 | **Pomodoro spacing**: 12px margin below the timer actions (Start Focus / Settings buttons) | ✅ Done | `src/popup/styles/components.css` |
+| 25 | **Modern logo**: indigo→violet gradient tile with white brain + amber spark; `public/icons/logo.svg` + regenerated 16/32/48/128 PNGs; header renders it (🧠 fallback in jsdom); manifest icons updated | ✅ Done | `public/icons/*`, `scripts/generate-icons.mjs`, `Header.tsx` |
+| 26 | **Side panel is the DEFAULT surface** on Chrome/Edge/Firefox (no floating popup; toolbar click opens the panel via `action.onClicked`), **popup kept for Safari** (no side panel API there); header panel↔popup toggle icon **removed**; `adhd_sidepanel_open` flag deleted; Firefox `sidebar_action` with `open_at_install`; `dist-safari/` build restores `default_popup` | ✅ Done | `manifest.json`, `scripts/build-{chrome,firefox,safari}.mjs`, `service-worker.ts`, `Header.tsx`, `Popup.tsx`, `src/shared/sidePanel.ts`, `src/sidepanel/index.tsx` |
+| 27 | **Build pipeline fix**: crx only bundles HTML pages referenced in the manifest — restoring `default_popup` in the source manifest (stripped post-build for Chrome/Edge/Firefox) so `src/popup/index.html` is built again (was 404 after the popup removal); `dist-safari` added to ESLint ignore | ✅ Done | `manifest.json`, `package.json`, `scripts/build-chrome.mjs`, `.eslintrc.cjs` |
+| 28 | Full re-verification of the batch: e2e **50/50**, manual **78/78** (incl. slow SW-tick), sidepanel-smoke **14/14**, multiwindow-smoke **9/9**, unit **268/268**, lint clean, `lint:firefox` 0 errors, real Firefox loads `dist-firefox` cleanly | ✅ Done | `scripts/e2e/*` |
 
 Manual testing checklist: see **Section 6** below.
 
@@ -363,3 +371,33 @@ Before this pass the popup only queried tabs **on mount** and after its own acti
 - `node scripts/e2e/chrome-e2e.mjs` → **49/49** (new §9c: live create/close, 2-window grouping, save-prompt selection, close-window modal + action).
 - `node scripts/e2e/manual-test.mjs` → **77 PASS / 0 FAIL / 1 slow-skip** (new §12.1–12.4).
 - Docs: `docs/manual-test-plan.md` §12 (multi-window & live data), `docs/manual-test-results.md` §12.
+
+## 17. Side-Panel-Default + Feature Batch (added 2026-08-03)
+
+### 17.1 Side panel is now the DEFAULT surface (Chrome / Edge / Firefox)
+
+- **Chromium**: `manifest.json` keeps `action.default_popup` so @crxjs bundles `src/popup/index.html` (the e2e/manual harnesses open that URL directly, and the Safari build needs the page), then `scripts/build-chrome.mjs` strips it from `dist/manifest.json` post-build. With no `default_popup`, Chrome fires `action.onClicked` → the service worker opens the side panel (`chrome.sidePanel.open({ windowId })`). No floating popup.
+- **Firefox**: `scripts/build-firefox.mjs` strips `default_popup` and adds `sidebar_action { default_panel: 'src/sidepanel/index.html', open_at_install: true }` — the toolbar button opens the sidebar, also no floating popup. Verified with `web-ext run` (real Firefox 152 loads `dist-firefox` cleanly).
+- **Safari**: has no side panel API (neither `side_panel`/`sidePanel` nor `sidebar_action`) → `scripts/build-safari.mjs` builds `dist-safari/` from `dist-firefox/`, strips the sidebar keys, and **restores `action.default_popup`** — the classic popup is the Safari surface. (~1–2 days of wrapper effort remains for a real Safari build — see §11.)
+- The header panel↔popup toggle icon is **removed** (there is nothing to toggle between — the panel is the surface); the `adhd_sidepanel_open` storage flag is deleted along with the `STORAGE_KEYS.SIDE_PANEL_OPEN` constant and the side-panel unload listener.
+
+### 17.2 Feature batch
+
+- **Tao Te Ching quotes** (`DailyQuote`): 13 curated quotes; each card cites the chapter and verse — “— Tao Te Ching, Ch. 8, v. 1”.
+- **Close-Window multi-window picker** (`QuickActions`): with 2+ windows, Home's “Close Window” opens a chooser listing every window with its tab count (pinned stay open; undoable); single-window environments close directly. Escape closes; focus is trapped. Verified live with 3 windows.
+- **Side panel full-height tab list**: `sidepanel.css` flex chain (`height:100vh` → `#root` → `.popup-root` → `.popup-content` → `#panel-tabs` → `.tab-group`), `.tab-group__list { flex:1; max-height:none; overflow-y:auto; overflow-x:hidden }`. In real Chrome: `scrollHeight 1058 > clientHeight 556`, `overflowX ok`.
+- **Pomodoro spacing**: `.pomodoro-timer__actions { margin-bottom: 12px }`.
+- **New logo**: `public/icons/logo.svg` (indigo→violet gradient tile, white brain, amber spark); `scripts/generate-icons.mjs` rasterizes via headless Chrome (`Page.captureScreenshot`, transparent bg) into 16/32/48/128 PNGs; `Header.tsx` renders the logo image (🧠 emoji fallback in jsdom); manifest `action.default_icon` + `icons` updated.
+
+### 17.3 Build pipeline fix (regression this batch caught)
+
+Removing `action.default_popup` from the source manifest silently dropped `src/popup/index.html` from the build — @crxjs only bundles HTML pages referenced by the manifest. Symptom: every harness aborted with `ERR_FILE_NOT_FOUND` on the popup URL (e2e: “timed out waiting for app header”). Fix: keep `default_popup` in the source manifest, strip it per-browser in `scripts/build-chrome.mjs` (Chrome/Edge) and `scripts/build-firefox.mjs` (Firefox), keep it in `build-safari.mjs`. `dist-safari/` was also missing from the ESLint ignore patterns → added.
+
+### 17.4 Verification (all green)
+
+- `pnpm lint` clean (whole project) · `pnpm test` **268/268** · `pnpm build:all` clean · `pnpm lint:firefox` **0 errors** (2 benign warnings, 1 notice).
+- `node scripts/e2e/chrome-e2e.mjs` → **50/50** (incl. rewritten §9b: no `default_popup`, no toggle icon, `chrome.sidePanel.open()` with user gesture, SW `getContexts` sees SIDE_PANEL, side panel renders 5 nav tabs + fluid layout + full-height scrollable list, heartbeat).
+- `node scripts/e2e/manual-test.mjs` → **78/78** (incl. `MANUAL_TEST_SLOW=1` SW-tick check 8.7; checks 1.1 & 7.5 updated for the new logo markup and the committed-URL undo race).
+- `node scripts/e2e/sidepanel-smoke.mjs` → **14/14** · `node scripts/e2e/multiwindow-smoke.mjs` → **9/9**.
+- Real-browser (Chrome for Testing :9222): popup renders logo + cited quote; side panel list fills height and scrolls; 3-window close picker lists “Window 1/2/3 — N tabs · will close”.
+- Real Firefox 152 (`web-ext run`): `dist-firefox` installs as a temporary add-on with no errors.

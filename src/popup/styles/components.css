@@ -47,42 +47,6 @@
   background: var(--hover-tint);
 }
 
-/* Side panel toggle — same circular icon-button shape as the theme toggle */
-.side-panel-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.side-panel-toggle:hover {
-  background: var(--hover-tint);
-  color: var(--text-primary);
-}
-
-.side-panel-toggle:focus-visible {
-  outline: 2px solid var(--primary-color);
-  outline-offset: 2px;
-}
-
-/* Active state — the side panel is open */
-.side-panel-toggle--active {
-  background: var(--primary-color);
-  color: var(--text-inverse);
-}
-
-.side-panel-toggle--active:hover {
-  background: var(--primary-hover);
-  color: var(--text-inverse);
-}
-
 .header-title {
   display: flex;
   align-items: center;
@@ -91,6 +55,13 @@
 
 .header-icon {
   font-size: 24px;
+}
+
+/* Extension logo in the header (replaces the emoji on real browsers) */
+.header-icon-img {
+  border-radius: 7px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .header-text {
@@ -157,8 +128,7 @@
     gap: 6px;
   }
 
-  .theme-toggle,
-  .side-panel-toggle {
+  .theme-toggle {
     width: 32px;
     height: 32px;
   }
@@ -182,8 +152,7 @@
     gap: 4px;
   }
 
-  .theme-toggle,
-  .side-panel-toggle {
+  .theme-toggle {
     width: 30px;
     height: 30px;
   }
@@ -640,6 +609,8 @@
   align-items: center;
   gap: 8px;
   margin-top: 8px;
+  /* Breathing room before the Settings toggle below */
+  margin-bottom: 12px;
 }
 
 .pomodoro-timer__secondary-actions {
@@ -1154,6 +1125,14 @@
   margin: 0;
 }
 
+/* Tao Te Ching attribution — chapter + verse of the quote */
+.daily-quote__source {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+  letter-spacing: 0.2px;
+}
+
 .daily-quote__stats {
   display: flex;
   gap: 16px;
@@ -1298,6 +1277,60 @@
   font-size: 13px;
   font-weight: 500;
   margin-bottom: 8px;
+}
+
+/* Window picker modal — choose which window to close (Home tab) */
+.window-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.window-picker__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.window-picker__option:hover {
+  border-color: var(--primary-color);
+  background: var(--primary-light);
+}
+
+.window-picker__option:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.window-picker__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.window-picker__name::before {
+  content: '🪟';
+  font-size: 15px;
+}
+
+.window-picker__count {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 /* ============================================================

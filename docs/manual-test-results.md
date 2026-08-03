@@ -2,9 +2,9 @@
 
 **Date:** 2026-08-03 · **Driver:** `node scripts/e2e/manual-test.mjs` (and `MANUAL_TEST_SLOW=1` for the SW-tick check)
 **Environment:** Self-contained Chrome for Testing (headless=new, fresh temp profile) with `dist/` loaded; real tabs, real storage, real service worker.
-**Result:** **77 PASS · 0 FAIL · 1 SKIP** (78 defined; the skip is the intentional ~60 s SW-tick check — run with `MANUAL_TEST_SLOW=1`). 21 🔴 must-pass items all green. Screenshots in `artifacts/manual/`, raw data in `artifacts/manual/results.json`.
+**Result:** **78 PASS · 0 FAIL · 0 SKIP** (with `MANUAL_TEST_SLOW=1`, which runs the ~60 s SW-tick check). 21 🔴 must-pass items all green. Screenshots in `artifacts/manual/`, raw data in `artifacts/manual/results.json`.
 
-> The automated harness (`chrome-e2e.mjs`, 49 checks) covers the fast smoke paths, the Chrome side panel, and the multi-window/live-data matrix; this run exercised the human-plan matrix (§1–§12) against the live extension — clicking real buttons, typing into real inputs, creating/observing real tabs and windows, reading real storage, and driving the real service worker. Checks 7.2 and 9.5 were hardened to use `waitFor` instead of fixed sleep, eliminating the pre-existing `chrome.tabs.create` URL-commit race.
+> The automated harness (`chrome-e2e.mjs`, 50 checks) covers the fast smoke paths, the Chrome side panel, and the multi-window/live-data matrix; this run exercised the human-plan matrix (§1–§12) against the live extension — clicking real buttons, typing into real inputs, creating/observing real tabs and windows, reading real storage, and driving the real service worker. Checks 7.2, 7.5 and 9.5 use `waitFor` on committed URLs instead of fixed sleep, eliminating the pre-existing `chrome.tabs.create` URL-commit race; check 1.1 asserts the new logo image (`.header-icon-img` → `public/icons/icon48.png`, 🧠 emoji fallback in jsdom).
 
 ---
 
@@ -33,7 +33,7 @@ Type mix exercised: 36 🟢 happy path · 14 ⚠️ edge case · 23 🔴 must-pa
 
 | # | Result | Notes |
 |---|---|---|
-| 1.1 | ✅ | Header: "ADHD Tabs", 🧠 logo, 3 theme-toggle buttons (export/import/theme), focus toggle |
+| 1.1 | ✅ | Header: "ADHD Tabs", new logo image (`.header-icon-img`, icon48.png), 3 theme-toggle buttons (export/import/theme), focus toggle — no side-panel toggle icon
 | 1.2 | ✅ | Daily quote renders with text |
 | 1.3 | ✅ | Exactly 5 nav tabs: Home, Tabs, Timer, Sessions, Block |
 | 1.4 | ✅ | Skeleton loading state present in code; on fast local storage it resolves sub-frame (imperceptible) — no flash of unstyled content |

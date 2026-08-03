@@ -1,18 +1,20 @@
 /**
  * Tests for the QuickActions component.
- * Covers undo close feedback, close-all confirmation, badge, and pluralization.
+ * Covers undo close feedback, the multi-window close picker, close-all
+ * confirmation, badges, and pluralization.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { QuickActions } from '../../src/popup/components/QuickActions';
+import { QuickActions, type WindowCloseOption } from '../../src/popup/components/QuickActions';
 
 /** Local mirror of the component's props (interface is not exported). */
 interface QuickActionsProps {
   tabCount: number;
   pinnedCount: number;
   windowCount: number;
+  windowOptions: WindowCloseOption[];
   onUndoClose: () => Promise<boolean>;
-  onCloseWindow: () => void;
+  onCloseWindow: (windowId: number) => void;
   onCloseAll: () => void;
   isFocusMode: boolean;
 }
@@ -22,8 +24,9 @@ const renderQuickActions = (partial: {
   tabCount?: number;
   pinnedCount?: number;
   windowCount?: number;
+  windowOptions?: WindowCloseOption[];
   onUndoClose?: () => Promise<boolean>;
-  onCloseWindow?: () => void;
+  onCloseWindow?: (windowId: number) => void;
   onCloseAll?: () => void;
   isFocusMode?: boolean;
 } = {}): { props: QuickActionsProps } => {
@@ -31,6 +34,8 @@ const renderQuickActions = (partial: {
     tabCount: partial.tabCount ?? 5,
     pinnedCount: partial.pinnedCount ?? 2,
     windowCount: partial.windowCount ?? 1,
+    windowOptions:
+      partial.windowOptions ?? [{ id: 1, label: 'Window 1', tabCount: 5, nonPinnedCount: 3 }],
     onUndoClose: partial.onUndoClose ?? vi.fn(async () => true),
     onCloseWindow: partial.onCloseWindow ?? vi.fn(),
     onCloseAll: partial.onCloseAll ?? vi.fn(),
@@ -41,23 +46,30 @@ const renderQuickActions = (partial: {
 };
 
 describe('QuickActions', () => {
-  it('renders undo close, close all, and the tab count', () => {
+  it('renders undo close, close window, close all, and the tab count', () => {
     renderQuickActions();
     expect(screen.getByRole('button', { name: 'Restore last closed tab' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Close non-pinned tabs in this window' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Close all non-pinned tabs' }),
     ).toBeInTheDocument();
     expect(screen.getByText('5 tabs open')).toBeInTheDocument();
   });
 
-  it('shows a badge with tabCount minus pinnedCount', () => {
-    renderQuickActions({ tabCount: 10, pinnedCount: 3 });
-    // Close Window + Close All both badge with non-pinned count (7)
+  it('badges both close actions with the non-pinned count', () => {
+    renderQuickActions({
+      tabCount: 10,
+      pinnedCount: 3,
+      windowOptions: [{ id: 1, label: 'Window 1', tabCount: 10, nonPinnedCount: 7 }],
+    });
+    // Close Window (closableTotal) + Close All (tabCount - pinnedCount) both = 7
     expect(screen.getAllByText('7')).toHaveLength(2);
   });
 
   it('hides the badge when there are no tabs', () => {
-    renderQuickActions({ tabCount: 0, pinnedCount: 0 });
+    renderQuickActions({ tabCount: 0, pinnedCount: 0, windowOptions: [] });
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
@@ -102,12 +114,7 @@ describe('QuickActions', () => {
       name: 'Confirm close all non-pinned tabs',
     });
     expect(confirmButton).toBeInTheDocument();
-    // Badge is hidden while confirming (scoped to the close-all button —
-    // the close-window button shows its own badge elsewhere)
-    const closeAllBtn = screen.getByRole('button', {
-      name: 'Confirm close all non-pinned tabs',
-    });
-    expect(closeAllBtn.querySelector('.quick-action-btn__badge')).toBeNull();
+    expect(confirmButton.querySelector('.quick-action-btn__badge')).toBeNull();
 
     // Second click — executes the close action
     fireEvent.click(confirmButton);
@@ -115,19 +122,60 @@ describe('QuickActions', () => {
     expect(screen.getByText('Tabs closed (pinned kept)')).toBeInTheDocument();
   });
 
-  it('renders a close-window action that needs its own confirmation', () => {
-    const { props } = renderQuickActions({ windowCount: 2 });
-    const closeWindowBtn = screen.getByRole('button', {
-      name: 'Close non-pinned tabs in this window',
+  it('with a single window, Close Window calls onCloseWindow directly (no picker)', () => {
+    const { props } = renderQuickActions({
+      windowOptions: [{ id: 7, label: 'Window 1', tabCount: 4, nonPinnedCount: 3 }],
     });
-    fireEvent.click(closeWindowBtn);
-    expect(props.onCloseWindow).not.toHaveBeenCalled();
-    expect(screen.getByText('Confirm?')).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole('button', { name: 'Confirm close non-pinned tabs in this window' }),
+      screen.getByRole('button', { name: 'Close non-pinned tabs in this window' }),
     );
     expect(props.onCloseWindow).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Window tabs closed (pinned kept)')).toBeInTheDocument();
+    expect(props.onCloseWindow).toHaveBeenCalledWith(7);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('with multiple windows, Close Window opens a picker listing every window', () => {
+    const { props } = renderQuickActions({
+      windowCount: 3,
+      windowOptions: [
+        { id: 1, label: 'Window 1', tabCount: 2, nonPinnedCount: 2 },
+        { id: 2, label: 'Window 2', tabCount: 5, nonPinnedCount: 4 },
+        { id: 3, label: 'Window 3', tabCount: 1, nonPinnedCount: 1 },
+      ],
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Choose a window to close non-pinned tabs' }),
+    );
+    // Picker modal opens with all three windows; nothing closed yet.
+    const dialog = screen.getByRole('dialog', { name: 'Choose a window to close' });
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Window 1/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Window 2/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Window 3/ })).toBeInTheDocument();
+    expect(props.onCloseWindow).not.toHaveBeenCalled();
+
+    // Choose Window 2 — onCloseWindow fires with its id and the picker closes.
+    fireEvent.click(screen.getByRole('button', { name: /Window 2/ }));
+    expect(props.onCloseWindow).toHaveBeenCalledTimes(1);
+    expect(props.onCloseWindow).toHaveBeenCalledWith(2);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('Escape closes the window picker without closing anything', () => {
+    const { props } = renderQuickActions({
+      windowCount: 2,
+      windowOptions: [
+        { id: 1, label: 'Window 1', tabCount: 2, nonPinnedCount: 2 },
+        { id: 2, label: 'Window 2', tabCount: 5, nonPinnedCount: 4 },
+      ],
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Choose a window to close non-pinned tabs' }),
+    );
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(props.onCloseWindow).not.toHaveBeenCalled();
   });
 
   it('shows the window count subtext only when multiple windows are open', () => {

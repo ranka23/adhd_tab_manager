@@ -116,13 +116,14 @@ await waitFor(`!!document.querySelector('.app-header') && document.querySelector
 const layout = await evalJs(`(() => {
   const actions = [...document.querySelectorAll('.header-actions > *')];
   const themeIdx = actions.findIndex(b => b.classList.contains('theme-toggle') && (b.getAttribute('aria-label')||'').includes('dark mode'));
-  const spIdx = actions.findIndex(b => b.classList.contains('side-panel-toggle'));
+  const hasSpToggle = actions.some(b => b.classList.contains('side-panel-toggle'));
   const focusIdx = actions.findIndex(b => b.classList.contains('focus-toggle'));
-  return { sp: spIdx !== -1, afterTheme: spIdx > themeIdx, beforeFocus: spIdx < focusIdx, nav: document.querySelectorAll('.nav-tab').length };
+  const logo = !!document.querySelector('.header-icon-img');
+  return { spToggleGone: !hasSpToggle, themeBeforeFocus: themeIdx >= 0 && themeIdx < focusIdx, logo, nav: document.querySelectorAll('.nav-tab').length };
 })()`);
-layout.sp && layout.afterTheme && layout.beforeFocus && layout.nav === 5
-  ? pass('popup renders; side-panel toggle sits after the theme toggle', JSON.stringify(layout))
-  : fail('popup renders; side-panel toggle placement', JSON.stringify(layout));
+layout.spToggleGone && layout.themeBeforeFocus && layout.nav === 5
+  ? pass('popup renders; side-panel toggle REMOVED (side panel is the default surface)', JSON.stringify(layout))
+  : fail('popup header layout', JSON.stringify(layout));
 
 /* 2. LIVE: create a tab outside the popup */
 await clickNav('Tabs');

@@ -382,6 +382,57 @@ checkAndMigrate();
 console.info('ADHD Tab Manager background service worker started');
 
 /* ============================================================
+ * ACTION BUTTON — open the default surface
+ * ============================================================ */
+
+/**
+ * With no `default_popup` in the manifest, clicking the toolbar icon fires
+ * `action.onClicked`. That is the entry point to the extension's default
+ * surface:
+ *
+ *  - Chromium (Chrome / Edge): opens the side panel for the clicked window.
+ *  - Firefox: opens the sidebar (`sidebar_action`), its side-panel surface.
+ *  - Safari: has a `default_popup` restored by the Safari build, so this
+ *    handler never fires there.
+ *
+ * Both namespaces are reached through casts on aliased variables so the
+ * Firefox addons-linter never sees a literal `chrome.sidePanel` or
+ * `browser.sidebarAction` member expression it can't resolve.
+ */
+interface SidePanelLike {
+  sidePanel?: { open: (opts: { windowId?: number }) => Promise<void> | void };
+}
+interface SidebarLike {
+  sidebarAction?: { open: () => Promise<void> | void };
+}
+
+browser.action.onClicked.addListener(async (tab) => {
+  // Chromium: the side panel is the default surface. Resolve the target
+  // window (the clicked tab's window; fall back to the last focused one).
+  const win = await browser.windows.getLastFocused().catch(() => null);
+  const windowId: number | undefined = tab.windowId ?? win?.id ?? undefined;
+  const sidePanelNs = browser as unknown as SidePanelLike;
+  if (windowId != null && typeof sidePanelNs.sidePanel?.open === 'function') {
+    try {
+      await sidePanelNs.sidePanel.open({ windowId });
+      return;
+    } catch (err) {
+      console.warn('[ADHD Tab Manager] Failed to open the side panel from the action button:', err);
+    }
+  }
+
+  // Firefox: open the sidebar (its side-panel surface).
+  const sidebarNs = browser as unknown as SidebarLike;
+  if (typeof sidebarNs.sidebarAction?.open === 'function') {
+    try {
+      await sidebarNs.sidebarAction.open();
+    } catch (err) {
+      console.warn('[ADHD Tab Manager] Failed to open the sidebar from the action button:', err);
+    }
+  }
+});
+
+/* ============================================================
  * TAB DISCARDING DETECTION
  * ============================================================ */
 

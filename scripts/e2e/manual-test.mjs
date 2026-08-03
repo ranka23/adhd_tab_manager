@@ -569,14 +569,19 @@ section('1. Render & shell');
 
 await check('1.1', 'Header renders (title, logo, theme toggle)', '🟢', async () => {
   const title = await pe(`document.querySelector('.header-text')?.textContent`);
-  const icon = await pe(`document.querySelector('.header-icon')?.textContent`);
+  // New logo: <img class="header-icon-img"> in real browsers, 🧠 fallback in jsdom.
+  const logoImg = await pe(`(() => { const i = document.querySelector('.header-icon-img'); if (!i) return null; return { src: i.getAttribute('src'), w: i.getAttribute('width') }; })()`);
+  const emojiFallback = await pe(`document.querySelector('.header-icon')?.textContent`);
   const toggles = await pe(`document.querySelectorAll('.theme-toggle').length`);
   const focusBtn = await pe(`!!document.querySelector('.focus-toggle')`);
   assert(title === 'ADHD Tabs', `title="${title}"`);
-  assert(icon === '🧠', `icon="${icon}"`);
+  const logoOk = logoImg
+    ? logoImg.src.includes('public/icons/icon48.png')
+    : emojiFallback === '🧠';
+  assert(logoOk, `logo=${JSON.stringify(logoImg)} emoji="${emojiFallback}"`);
   assert(toggles >= 3, `theme-toggles=${toggles}`);
   assert(focusBtn, 'no focus-toggle');
-  return `title ok, ${toggles} header buttons`;
+  return `title ok, ${toggles} header buttons, logo ${logoImg ? 'img' : 'emoji'}`;
 });
 
 await check('1.2', 'Daily quote renders', '🟢', async () => {
@@ -1503,15 +1508,21 @@ await check('7.5', 'Undo after reopening the popup', '🟢', async () => {
   await openPopup();
   await waitReady();
   await clickBtn('Undo Close');
-  await sleep(500);
-  const restored = (await allTabs()).some((t) => {
-    try {
-      return new URL(t.url).hostname === domain;
-    } catch {
-      return false;
-    }
-  });
-  assert(restored, `"${domain}" not restored after reopen`);
+  // chrome.tabs.create resolves before the URL commits — poll for the committed
+  // hostname instead of sampling once (same race as checks 7.2 / 9.5).
+  await waitFor(
+    async () => {
+      const tabs = await allTabs();
+      return tabs.some((t) => {
+        try {
+          return new URL(t.url).hostname === domain;
+        } catch {
+          return false;
+        }
+      });
+    },
+    { timeout: 8000, label: `"${domain}" restored after reopen` },
+  );
   return 'restored after popup reopen';
 });
 

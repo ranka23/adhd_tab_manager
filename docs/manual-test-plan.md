@@ -247,33 +247,33 @@ Also verify: zoom 200% still usable; keyboard-only navigation works; `prefers-re
 
 ## 13. Firefox parity 🔴
 
-Run the whole suite in Firefox (`about:debugging` → Load Temporary Add-on → `dist-firefox/manifest.json`).
+Run the whole suite in Firefox (`about:debugging` → Load Temporary Add-on → `dist-firefox/manifest.json`). Firefox has no Chromium side-panel API — the default surface is the **sidebar** (`sidebar_action` with `open_at_install: true`): clicking the toolbar button opens the sidebar, no floating popup.
 
 | # | Test | Expected |
 |---|---|---|
-| 13.1 | Extension loads with no errors in Browser Console | Clean load |
-| 13.2 | Popup renders (all 5 nav tabs) | Same as Chrome |
+| 13.1 | Extension loads with no errors in Browser Console | Clean load (verified: `web-ext run` installs `dist-firefox` with no errors) |
+| 13.2 | Sidebar renders the app (all 5 nav tabs) | Toolbar click opens the sidebar (same app as Chrome's side panel) |
 | 13.3 | Theme persists + no flash | Same as Chrome |
 | 13.4 | Focus mode blocks sites | Redirect works |
 | 13.5 | Pomodoro completes with popup closed | Notification + alarm works (event page, not SW) |
 | 13.6 | Sessions save/restore/delete+undo | Same behavior as Chrome |
 | 13.7 | Import/export | Same as Chrome |
 | 13.8 | Responsive widths | No overflow |
-| 13.9 | Side panel toggle hidden | No side-panel button in the header; manifest has no `side_panel`/`sidePanel` (Firefox has no side panel API) |
+| 13.9 | No floating popup | Manifest has no `action.default_popup`; only `sidebar_action` |
 | 13.10 | Multi-window grouping + save prompt | Same as Chrome (§12) |
 
 ---
 
-## 14. Side panel (Chrome only) 🟢
+## 14. Side panel — DEFAULT surface (Chrome / Edge) 🟢
 
-Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). Firefox/Safari have no side panel API — the toggle is hidden and `dist-firefox` strips the manifest key.
+Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). The toolbar button opens the side panel directly (`action.onClicked` → `chrome.sidePanel.open`); there is **no floating popup** and **no header toggle icon**. Safari keeps the classic popup (see `scripts/build-safari.mjs` / `dist-safari`).
 
 | # | Test | Steps | Expected | Type |
 |---|---|---|---|---|
-| 14.1 | Toggle button placement | Open popup | Side-panel icon button sits directly after the light/dark icon, before the Focus button | 🟢 |
-| 14.2 | Open | Click the side-panel icon | Side panel opens on the right; the icon gets the active (filled) state | 🟢 |
-| 14.3 | 🔴 Icon reflects open state | With panel open, close popup and reopen | Icon still shows the active state | 🔴 |
-| 14.4 | Panel renders app | Side panel open | Header, quote, all 5 nav tabs render; same theme as popup (no flash) | 🟢 |
+| 14.1 | Toolbar click opens panel | Click the toolbar icon | Side panel opens on the right — NOT a popup; no `default_popup` in `dist/manifest.json` | 🟢 |
+| 14.2 | No header toggle | Open the panel | Header has exactly: Export, Import, dark-mode buttons (no side-panel toggle icon) | 🟢 |
+| 14.3 | Panel renders app | Side panel open | Header, quote, all 5 nav tabs render; same theme as popup (no flash) | 🟢 |
+| 14.4 | Full-height tab list | Open Tabs view with 8+ tabs | List fills the panel height; scrolls internally (`overflow-y: auto`); no x-overflow | 📱 |
 | 14.5 | Persistence | Use the panel for a while, switch tabs, come back | Panel stays open and state persists | 🟢 |
 | 14.6 | Timer while panel open | Start pomodoro in panel, leave panel open, wait a minute | Countdown decreases by exactly 1/min (SW skips its tick — `runtime.getContexts` sees SIDE_PANEL) | 🔴 |
 | 14.7 | Focus mode from panel | Start focus in the panel | Blocker active; navigating to a blocked site redirects | 🟢 |
@@ -289,13 +289,16 @@ Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). Firefox/Safari 
 Before tagging v1.0.0:
 
 - [x] `pnpm lint` → 0 problems
-- [x] `pnpm test` → all pass (267)
-- [x] `pnpm build:all` → clean
+- [x] `pnpm test` → all pass (268)
+- [x] `pnpm build:all` → clean (dist/ + dist-firefox/)
+- [x] `pnpm build:safari` → clean (dist-safari/, popup surface, no side panel)
 - [x] `pnpm lint:firefox` → 0 errors
-- [x] `node scripts/e2e/chrome-e2e.mjs` → 49/49
-- [x] `node scripts/e2e/manual-test.mjs` → 77/77 (see `docs/manual-test-results.md`)
+- [x] `node scripts/e2e/chrome-e2e.mjs` → 50/50
+- [x] `node scripts/e2e/manual-test.mjs` → 78/78 (incl. `MANUAL_TEST_SLOW=1`)
+- [x] `node scripts/e2e/sidepanel-smoke.mjs` → 14/14
+- [x] `node scripts/e2e/multiwindow-smoke.mjs` → 9/9
 - [x] Sections 1–12 machine-verified (all 🔴 items green)
-- [ ] Section 13 Firefox parity + Section 14 side panel + toolbar/notification/file-picker — human pass required
+- [ ] Section 13 Firefox sidebar + §14 side-panel default + toolbar/notification/file-picker — human pass required
 - [x] `git status` clean; version bumped; README updated
 - [ ] (Optional) Tag `v1.0.0`
 
@@ -311,7 +314,6 @@ Before tagging v1.0.0:
 | `adhd_active_timer` | Pomodoro state (phase, remainingSeconds, …) |
 | `adhd_closed_tabs` | Undo-close history (max 20) |
 | `adhd_theme` | `'light' \| 'dark'` |
-| `adhd_sidepanel_open` | `true` while the Chrome side panel page is mounted (popup header uses it for the toggle icon; cleared on unload) |
 | `adhd_popup_heartbeat` | ms timestamp; SW uses it to detect an open popup (Firefox) |
 | `adhd_timer_settings` | work/short/long minutes + pomodoros-before-long |
 | `adhd_distractions_blocked`, `adhd_focus_minutes_today`, `adhd_sessions_saved_today`, `adhd_pomodoro_streak` | Daily stats |

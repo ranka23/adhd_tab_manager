@@ -34,7 +34,7 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
     'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
   },
-  ignorePatterns: ['dist', 'dist-firefox', 'coverage', 'artifacts', 'node_modules', '!.eslintrc.cjs'],
+  ignorePatterns: ['dist', 'dist-firefox', 'dist-safari', 'coverage', 'artifacts', 'node_modules', '!.eslintrc.cjs'],
   overrides: [
     // This config file itself is CJS (module.exports), not part of the
     // tsconfig program. Lint it with plain parsing and Node globals so the

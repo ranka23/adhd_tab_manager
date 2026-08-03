@@ -18,12 +18,29 @@ const makeStats = (overrides: Partial<DailyStats> = {}): DailyStats => ({
 });
 
 describe('DailyQuote', () => {
-  it('renders a time-based greeting and one of the motivational quotes', () => {
+  it('renders a time-based greeting and a Tao Te Ching quote with attribution', () => {
     const { container } = render(<DailyQuote stats={makeStats()} />);
     expect(screen.getByText(/^Good (morning|afternoon|evening)! 👋$/)).toBeInTheDocument();
     const quoteEl = container.querySelector('.daily-quote__text');
     expect(quoteEl).toBeInTheDocument();
-    expect(MOTIVATIONAL_QUOTES).toContain(quoteEl?.textContent);
+    expect(MOTIVATIONAL_QUOTES.some((q) => q.text === quoteEl?.textContent)).toBe(true);
+    // The source line must cite the Tao Te Ching chapter and verse.
+    const sourceEl = container.querySelector('.daily-quote__source');
+    expect(sourceEl).toBeInTheDocument();
+    expect(sourceEl?.textContent).toMatch(/Tao Te Ching, Ch\. \d+, v\. \d+/);
+    // The cited chapter/verse must match the quote actually shown.
+    const shown = MOTIVATIONAL_QUOTES.find((q) => q.text === quoteEl?.textContent);
+    expect(sourceEl?.textContent).toContain(`Ch. ${shown?.chapter}`);
+    expect(sourceEl?.textContent).toContain(`v. ${shown?.verse}`);
+  });
+
+  it('every quote carries a real chapter and verse', () => {
+    for (const q of MOTIVATIONAL_QUOTES) {
+      expect(q.chapter).toBeGreaterThanOrEqual(1);
+      expect(q.chapter).toBeLessThanOrEqual(81);
+      expect(q.verse).toBeGreaterThanOrEqual(1);
+      expect(q.text.length).toBeGreaterThan(10);
+    }
   });
 
   it('renders focus time as hours and minutes with its label', () => {

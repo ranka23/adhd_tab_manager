@@ -2,9 +2,16 @@
  * Header component — displays the app title and a focus mode toggle.
  * Uses the Material Design-inspired styling with calm blue tones.
  * The header is minimal to reduce cognitive load for ADHD users.
+ *
+ * The header shows the ADHD Tab Manager logo (replacing the old emoji),
+ * export/import actions, the light/dark theme toggle, and the focus toggle.
+ * There is intentionally NO side-panel toggle: on Chromium and Firefox the
+ * side panel IS the default surface (toolbar click opens it), so a
+ * panel ↔ popup switch icon would be redundant.
  */
 
 import React from 'react';
+import { browser } from '../../shared/browser';
 
 /** Props for the Header component */
 interface HeaderProps {
@@ -20,10 +27,6 @@ interface HeaderProps {
   onExport?: () => void;
   /** Callback to import data */
   onImport?: () => void;
-  /** Whether the side panel is currently open (Chromium only) */
-  isSidePanelOpen?: boolean;
-  /** Callback to open the extension in the Chrome side panel */
-  onToggleSidePanel?: () => void;
 }
 
 /**
@@ -37,16 +40,31 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleDarkMode,
   onExport,
   onImport,
-  isSidePanelOpen = false,
-  onToggleSidePanel,
 }) => {
+  /** Logo URL — only resolvable inside a real extension context (tests use a fallback) */
+  const logoUrl =
+    typeof browser.runtime?.getURL === 'function'
+      ? browser.runtime.getURL('public/icons/icon48.png')
+      : null;
+
   return (
     <header className="app-header">
-      {/* App title with a gentle brain icon */}
+      {/* App title with the extension logo */}
       <div className="header-title">
-        <span className="header-icon" role="img" aria-label="brain">
-          🧠
-        </span>
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            className="header-icon-img"
+            width={26}
+            height={26}
+            alt=""
+            aria-hidden="true"
+          />
+        ) : (
+          <span className="header-icon" role="img" aria-label="brain">
+            🧠
+          </span>
+        )}
         <h1 className="header-text">ADHD Tabs</h1>
       </div>
 
@@ -81,35 +99,6 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {isDarkMode ? '☀️' : '🌙'}
         </button>
-
-        {/* Side panel toggle — opens the extension in the Chrome side panel.
-            Hidden where the API doesn't exist (Firefox, Safari). */}
-        {onToggleSidePanel && (
-          <button
-            className={`side-panel-toggle ${isSidePanelOpen ? 'side-panel-toggle--active' : ''}`}
-            onClick={onToggleSidePanel}
-            aria-label="Open in side panel"
-            aria-pressed={isSidePanelOpen}
-            title={isSidePanelOpen ? 'Side panel open' : 'Open in side panel'}
-          >
-            {/* Side panel glyph — a window split by a vertical divider */}
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <line x1="15" y1="4" x2="15" y2="20" />
-            </svg>
-          </button>
-        )}
 
         {/* Focus mode toggle — big, obvious button */}
         <button

@@ -1,6 +1,12 @@
 /**
  * QuickActions component — provides one-click utility actions.
- * Undo close, close all non-pinned tabs, and other quick operations.
+ * Undo close, close non-pinned tabs in a chosen window, and close all
+ * non-pinned tabs across every window.
+ *
+ * MULTI-WINDOW: "Close Window" opens a picker that lists every open window
+ * ("Window 1 — 3 tabs", "Window 2 — 1 tab", …) so the user chooses exactly
+ * which window to close. The picker collapses to a direct action when only
+ * one window is open (the confirmation modal in the popup still applies).
  *
  * ADHD design principles:
  * - Large, clearly labeled buttons
@@ -9,7 +15,19 @@
  * - Undo-friendly: everything can be undone
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+
+/** A single window the user can choose to close */
+export interface WindowCloseOption {
+  /** Chrome window ID */
+  id: number;
+  /** Display label ("Window 1", "Window 2", …) */
+  label: string;
+  /** Total tabs in the window */
+  tabCount: number;
+  /** Non-pinned tabs that would actually close */
+  nonPinnedCount: number;
+}
 
 /** Props for the QuickActions component */
 interface QuickActionsProps {
@@ -19,10 +37,12 @@ interface QuickActionsProps {
   pinnedCount: number;
   /** Number of open browser windows */
   windowCount: number;
+  /** Every open window, with per-window close counts (drives the picker) */
+  windowOptions: WindowCloseOption[];
   /** Callback to undo-close the last closed tab */
   onUndoClose: () => Promise<boolean>;
-  /** Callback to close all non-pinned tabs in the current window */
-  onCloseWindow: () => void;
+  /** Callback to close all non-pinned tabs in a specific window */
+  onCloseWindow: (windowId: number) => void;
   /** Callback to close all non-pinned tabs in every window */
   onCloseAll: () => void;
   /** Whether focus mode is active (affects available actions) */
@@ -37,16 +57,19 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   tabCount,
   pinnedCount,
   windowCount,
+  windowOptions,
   onUndoClose,
   onCloseWindow,
   onCloseAll,
 }) => {
   /** Whether to show the "close all" confirmation */
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  /** Whether to show the "close window" confirmation */
-  const [showCloseWindowConfirm, setShowCloseWindowConfirm] = useState(false);
+  /** Whether the window picker modal is open */
+  const [pickerOpen, setPickerOpen] = useState(false);
   /** Success message shown briefly after an action */
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  /** Ref for the window picker modal (focus + Escape handling) */
+  const pickerRef = useRef<HTMLDivElement | null>(null);
 
   /** Handles undo-close with success feedback */
   const handleUndoClose = async (): Promise<void> => {
@@ -72,17 +95,67 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     setTimeout(() => setSuccessMessage(null), 2000);
   };
 
-  /** Handles close-window with confirmation */
+  /**
+   * Handles the Close Window button. With a single window the choice is
+   * unambiguous — go straight to the popup's confirmation modal. With
+   * several windows, open the picker so the user chooses which one.
+   */
   const handleCloseWindow = (): void => {
-    if (!showCloseWindowConfirm) {
-      setShowCloseWindowConfirm(true);
+    if (windowOptions.length <= 1) {
+      const only = windowOptions[0];
+      if (only) onCloseWindow(only.id);
       return;
     }
-    onCloseWindow();
-    setShowCloseWindowConfirm(false);
-    setSuccessMessage('Window tabs closed (pinned kept)');
-    setTimeout(() => setSuccessMessage(null), 2000);
+    setPickerOpen(true);
   };
+
+  /** Picker: user selected a window — close the picker and confirm in the popup */
+  const chooseWindow = (option: WindowCloseOption): void => {
+    setPickerOpen(false);
+    onCloseWindow(option.id);
+  };
+
+  /** Escape + focus management for the window picker modal */
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const first = pickerRef.current?.querySelector<HTMLButtonElement>('.window-picker__option');
+    first?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        setPickerOpen(false);
+        return;
+      }
+      // Simple focus trap: Tab wraps between the options and Cancel.
+      if (e.key === 'Tab' && pickerRef.current) {
+        const focusable = Array.from(
+          pickerRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled])',
+          ),
+        );
+        if (focusable.length === 0) return;
+        const firstEl = focusable[0]!;
+        const lastEl = focusable[focusable.length - 1]!;
+        const active = document.activeElement as HTMLElement | null;
+        if (e.shiftKey && active === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        } else if (!e.shiftKey && active === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return (): void => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [pickerOpen]);
+
+  /** Total non-pinned tabs across all windows — what "close" would remove */
+  const closableTotal = windowOptions.reduce((sum, w) => sum + w.nonPinnedCount, 0);
 
   return (
     <div className="quick-actions">
@@ -102,24 +175,22 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           <span className="quick-action-btn__label">Undo Close</span>
         </button>
 
-        {/* Close Non-Pinned Tabs in the Current Window */}
+        {/* Close Non-Pinned Tabs — pick which window (Home tab chooser) */}
         <button
-          className={`quick-action-btn ${showCloseWindowConfirm ? 'quick-action-btn--danger' : ''}`}
+          className={`quick-action-btn ${showCloseConfirm ? 'quick-action-btn--danger' : ''}`}
           onClick={handleCloseWindow}
-          onBlur={() => setShowCloseWindowConfirm(false)}
+          onBlur={() => setShowCloseConfirm(false)}
           aria-label={
-            showCloseWindowConfirm
-              ? 'Confirm close non-pinned tabs in this window'
+            windowOptions.length > 1
+              ? 'Choose a window to close non-pinned tabs'
               : 'Close non-pinned tabs in this window'
           }
         >
-          <span className="quick-action-btn__icon">{showCloseWindowConfirm ? '⚠️' : '🪟'}</span>
-          <span className="quick-action-btn__label">
-            {showCloseWindowConfirm ? 'Confirm?' : 'Close Window'}
-          </span>
-          {!showCloseWindowConfirm && tabCount > 0 && (
+          <span className="quick-action-btn__icon">🪟</span>
+          <span className="quick-action-btn__label">Close Window</span>
+          {!showCloseConfirm && tabCount > 0 && (
             <span className="quick-action-btn__badge">
-              {tabCount - pinnedCount > 0 ? tabCount - pinnedCount : 0}
+              {closableTotal > 0 ? closableTotal : 0}
             </span>
           )}
         </button>
@@ -156,6 +227,53 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           )}
         </div>
       </div>
+
+      {/* Window picker — "which window would you like to close?" */}
+      {pickerOpen && (
+        <div
+          className="modal-overlay"
+          onClick={() => setPickerOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Choose a window to close"
+        >
+          <div
+            className="confirm-dialog window-picker"
+            ref={pickerRef}
+            onClick={(e) => e.stopPropagation()}
+            role="document"
+          >
+            <div className="confirm-dialog__body">
+              <p className="confirm-dialog__message">Which window would you like to close?</p>
+              <div className="window-picker__list">
+                {windowOptions.map((w) => (
+                  <button
+                    key={w.id}
+                    className="window-picker__option"
+                    onClick={() => chooseWindow(w)}
+                  >
+                    <span className="window-picker__name">{w.label}</span>
+                    <span className="window-picker__count">
+                      {w.tabCount} tab{w.tabCount !== 1 ? 's' : ''}
+                      {w.nonPinnedCount > 0 && w.nonPinnedCount < w.tabCount
+                        ? ` · ${w.nonPinnedCount} will close`
+                        : w.nonPinnedCount === w.tabCount
+                          ? ' · will close'
+                          : ' · pinned only'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="confirm-dialog__hint">Pinned tabs stay open. You can undo after closing.</p>
+            </div>
+            <div className="confirm-dialog__actions">
+              <button className="btn btn-text" onClick={() => setPickerOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

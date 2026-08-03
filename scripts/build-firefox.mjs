@@ -87,6 +87,20 @@ delete manifest.key;
 delete manifest.side_panel;
 manifest.permissions = (manifest.permissions ?? []).filter((p) => p !== 'sidePanel');
 
+// The toolbar click must open the sidebar (the default surface), never a
+// floating popup — so drop the popup the source manifest kept for bundling.
+delete manifest.action?.default_popup;
+
+// Firefox's side-panel surface is the sidebar (`sidebar_action`, supported in
+// MV3). This keeps the side panel the DEFAULT surface on Firefox with no
+// floating popup, matching Chromium. `open_at_install` makes the sidebar the
+// first thing the user sees after installing.
+manifest.sidebar_action = {
+  default_panel: 'src/sidepanel/index.html',
+  default_title: 'ADHD Tabs',
+  open_at_install: true,
+};
+
 // Firefox uses an event page (classic script), not a module service worker.
 manifest.background = { scripts: ['background.js'] };
 

@@ -29,7 +29,6 @@ import { validateBackupData } from './utils/validation';
 import { getAppliedTheme, saveTheme, type Theme } from './utils/theme';
 import type { FocusModeState, DailyStats, TabSession, TabInfo, WindowInfo } from './types';
 import { POPUP_HEARTBEAT_INTERVAL_MS, STORAGE_KEYS } from '../shared/constants';
-import { isSidePanelSupported, toggleSidePanel } from '../shared/sidePanel';
 import { getWindowLabel } from './utils/helpers';
 import { browser } from '../shared/browser';
 
@@ -60,12 +59,6 @@ export const Popup: React.FC = () => {
     if (typeof document === 'undefined') return false;
     return getAppliedTheme() === 'dark';
   });
-
-  /* ---- Side panel state (Chromium only) ---- */
-  /** Whether the Chrome side panel is currently open — drives the header icon */
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-  /** Whether the current browser exposes the side panel API (Chrome only) */
-  const [sidePanelSupported] = useState<boolean>(isSidePanelSupported);
 
   /* ---- Undo session deletion state ---- */
   const [undoSessionDelete, setUndoSessionDelete] = useState<{
@@ -181,48 +174,11 @@ export const Popup: React.FC = () => {
   }, []);
 
   /**
-   * Side panel state — the panel page sets STORAGE_KEYS.SIDE_PANEL_OPEN on
-   * mount and clears it on unload; we mirror it so the header toggle icon
-   * reflects whether the panel is open.
+   * Side panel state is now implicit: on Chromium the side panel IS the
+   * default surface (toolbar click opens it via the service worker), so no
+   * header toggle or open-flag mirroring is needed. The popup page remains
+   * as a page for testing and for Firefox/Safari popup fallbacks.
    */
-  useEffect(() => {
-    if (!sidePanelSupported) return;
-
-    void browser.storage.local.get(STORAGE_KEYS.SIDE_PANEL_OPEN).then((result) => {
-      setIsSidePanelOpen(result[STORAGE_KEYS.SIDE_PANEL_OPEN] === true);
-    });
-
-    const onStorageChanged = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ): void => {
-      const change = changes[STORAGE_KEYS.SIDE_PANEL_OPEN];
-      if (area === 'local' && change) {
-        setIsSidePanelOpen(change.newValue === true);
-      }
-    };
-    browser.storage.onChanged.addListener(onStorageChanged);
-    return (): void => {
-      browser.storage.onChanged.removeListener(onStorageChanged);
-    };
-  }, [sidePanelSupported]);
-
-  /**
-   * Opens (or closes, when the runtime supports it) the extension in the
-   * Chrome side panel. No-op on browsers without the side panel API.
-   */
-  const handleToggleSidePanel = useCallback(async () => {
-    if (!sidePanelSupported) return;
-    try {
-      const win = await browser.windows.getCurrent();
-      const ok = await toggleSidePanel(win.id ?? chrome.windows.WINDOW_ID_CURRENT, isSidePanelOpen);
-      if (!ok) {
-        showToast('Side panel is only available in Chrome');
-      }
-    } catch (err) {
-      console.warn('Failed to toggle the side panel:', err);
-    }
-  }, [sidePanelSupported, isSidePanelOpen, showToast]);
 
   /** Handles starting focus mode */
   const handleStartFocus = useCallback(async () => {
@@ -300,6 +256,18 @@ export const Popup: React.FC = () => {
     return counts;
   }, [tabs.tabs]);
 
+  /** Per-window options for the Home-tab "Close Window" picker */
+  const windowOptions = useMemo(
+    () =>
+      tabs.windows.map((w) => ({
+        id: w.id,
+        label: getWindowLabel(w.id, tabs.windows),
+        tabCount: windowTabCounts[w.id] ?? 0,
+        nonPinnedCount: tabs.tabs.filter((t) => t.windowId === w.id && !t.pinned).length,
+      })),
+    [tabs.windows, tabs.tabs, windowTabCounts],
+  );
+
   /**
    * Builds the per-window breakdown of a list of tabs, for the
    * close confirmation dialog and quick-action info.
@@ -352,16 +320,6 @@ export const Popup: React.FC = () => {
     },
     [tabs, showToast, buildBreakdown],
   );
-
-  /** Closes non-pinned tabs in the window the popup is attached to */
-  const handleCloseCurrentWindow = useCallback(() => {
-    const windowId = tabs.currentWindowId ?? tabs.windows[0]?.id;
-    if (windowId == null) {
-      showToast('No window to close');
-      return;
-    }
-    handleCloseWindow(windowId);
-  }, [tabs.currentWindowId, tabs.windows, handleCloseWindow, showToast]);
 
   /** Executes the close action after confirmation */
   const executeClose = useCallback(async () => {
@@ -621,8 +579,6 @@ export const Popup: React.FC = () => {
         onToggleDarkMode={handleToggleDarkMode}
         onExport={handleExport}
         onImport={handleImport}
-        isSidePanelOpen={isSidePanelOpen}
-        {...(sidePanelSupported ? { onToggleSidePanel: handleToggleSidePanel } : {})}
       />
 
       {/* Loading skeletons (shown when data is loading) */}
@@ -833,8 +789,9 @@ export const Popup: React.FC = () => {
                       tabCount={tabs.tabs.length}
                       pinnedCount={tabs.tabs.filter((t) => t.pinned).length}
                       windowCount={tabs.windows.length}
+                      windowOptions={windowOptions}
                       onUndoClose={tabs.undoCloseTab}
-                      onCloseWindow={handleCloseCurrentWindow}
+                      onCloseWindow={handleCloseWindow}
                       onCloseAll={handleCloseAll}
                       isFocusMode={focusMode.isActive}
                     />

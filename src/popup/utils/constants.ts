@@ -3,24 +3,71 @@
  * These are used by components and hooks within the popup.
  */
 
-/** Motivational quotes shown in the DailyQuote component.
- *  Carefully curated for ADHD users — encouraging without being overwhelming. */
-export const MOTIVATIONAL_QUOTES: readonly string[] = [
-  'Your brain is wired for creativity. Channel it. ✨',
-  'Progress, not perfection. Every tab counts. 🎯',
-  'You are more than your distractions. 💙',
-  "One thing at a time. You've got this. 🌟",
-  'Small steps lead to big wins. 🏆',
-  "Focus is a skill, and you're building it. 💪",
-  'Your attention is valuable. Protect it. 🛡️',
-  "Today's effort is tomorrow's success. 🌱",
-  "Be kind to your brain. It's doing its best. 🧠",
-  "Deep breath. You're doing great. 🌊",
-  'The best time to focus was yesterday. The second best time is now. ⏰',
-  'Your future self will thank you for this. 🙏',
-  'Every minute of focus is a victory. 🎉',
-  "It's okay to start small. Just start. 🚀",
-  "You don't have to be perfect to be amazing. 🌈",
+/**
+ * Motivational quotes shown in the DailyQuote component — drawn from the
+ * Tao Te Ching (道德經), the ancient Chinese classic of calm, effortless
+ * action. Chosen for ADHD users: they encourage stillness, small steps,
+ * and self-knowledge without pressure.
+ *
+ * `chapter` and `verse` follow the traditional (Wáng Bì) stanza divisions
+ * of the Chinese text, which is the numbering most English translations
+ * use. The wording is a modern, plain-English rendering of that stanza.
+ */
+export interface TaoQuote {
+  /** Quote text (modern English rendering) */
+  text: string;
+  /** Chapter of the Tao Te Ching (1–81) */
+  chapter: number;
+  /** Verse (stanza) within the chapter */
+  verse: number;
+}
+
+export const MOTIVATIONAL_QUOTES: readonly TaoQuote[] = [
+  { text: 'The Tao that can be told is not the eternal Tao.', chapter: 1, verse: 1 },
+  {
+    text: 'The highest good is like water — it benefits all things without competing.',
+    chapter: 8,
+    verse: 1,
+  },
+  {
+    text: 'The ancient masters were subtle, mysterious, and profoundly wise.',
+    chapter: 15,
+    verse: 1,
+  },
+  {
+    text: 'Heaviness is the root of lightness; stillness is the master of restlessness.',
+    chapter: 26,
+    verse: 1,
+  },
+  {
+    text: 'Knowing others is intelligence; knowing yourself is true wisdom.',
+    chapter: 33,
+    verse: 1,
+  },
+  {
+    text: 'Mastering others is strength; mastering yourself is true power.',
+    chapter: 33,
+    verse: 2,
+  },
+  { text: 'The Tao does nothing, yet nothing is left undone.', chapter: 37, verse: 1 },
+  {
+    text: 'Without going outside your door, you can know the whole world.',
+    chapter: 47,
+    verse: 1,
+  },
+  { text: 'Those who know do not speak; those who speak do not know.', chapter: 56, verse: 1 },
+  {
+    text: "The world's great things are accomplished through small steps.",
+    chapter: 63,
+    verse: 6,
+  },
+  { text: 'A journey of a thousand miles begins beneath your feet.', chapter: 64, verse: 9 },
+  {
+    text: 'Be as careful at the end as at the beginning, and there will be no failure.',
+    chapter: 64,
+    verse: 15,
+  },
+  { text: 'Knowing that you do not know is the highest wisdom.', chapter: 71, verse: 1 },
 ] as const;
 
 /** Session icon options for users to choose from */

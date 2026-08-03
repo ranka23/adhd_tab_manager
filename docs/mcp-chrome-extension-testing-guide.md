@@ -356,25 +356,33 @@ action". Two ways to get a genuine gesture:
 2. **Raw CDP** — pass `userGesture: true` to `Runtime.evaluate` (this repo's e2e harness does
    exactly this: `{ expression, awaitPromise: true, returnByValue: true, userGesture: true }`).
 
-Worked flow (this repo):
+**The side panel is now the DEFAULT surface** on Chrome/Edge/Firefox (this repo, since the
+side-panel-default batch): the toolbar icon has **no `default_popup`** — clicking it fires
+`action.onClicked`, and the service worker calls `chrome.sidePanel.open({ windowId })` itself.
+There is no header toggle icon to click. Worked flow (this repo):
 
 ```
-1. Open the popup as a tab.
-2. Snapshot → click the side-panel icon (aria-label "Open in side panel").
-3. Wait: chrome.storage.local.get('adhd_sidepanel_open') === true
-   (the panel page publishes this flag on mount — Chrome has no "is the panel open" query API).
-4. Assert the header icon flipped to .side-panel-toggle--active.
+1. In the service worker (or any extension page):
+     chrome.sidePanel.open({ windowId })   // with userGesture: true via CDP
+2. Wait: chrome.runtime.getContexts({ contextTypes: ['SIDE_PANEL'] }).length === 1
+   (the SW uses this to skip its pomodoro tick while the panel is open).
+3. Assert the panel page (src/sidepanel/index.html) renders the app with the fluid
+   .sidepanel-body layout, and its tab list has overflow-y:auto + flex:1.
 ```
+
+Opening `chrome-extension://<id>/src/sidepanel/index.html` as a **tab** (§10.1) also works for
+rendering checks — but the real panel is what the `runtime.getContexts` guard sees.
 
 ### 10.3 Gotchas
 
-- **No query API** for open/close state — the page must self-report (storage flag / message).
-- **No `close()`** in most Chrome versions — clicking the toggle when open is a no-op
-  (brings the panel to front). Treat it as open-only in tests.
+- **No query API** for open/close state — detect the panel via `runtime.getContexts({ contextTypes:
+  ['SIDE_PANEL'] })` from the service worker instead of a storage flag.
+- **No `close()`** in most Chrome versions — treat the panel as open-only in tests.
 - **Headless works** — the panel page mounts in `--headless=new` (verified: this repo's e2e
-  opens the real panel and the storage flag flips).
-- **Firefox / Safari have no side panel API** — the toggle is hidden there, and the Firefox
-  build strips the manifest key. Don't test panel flows in Firefox.
+  opens the real panel and `getContexts` sees the SIDE_PANEL context).
+- **Firefox uses `sidebar_action`** (not the Chromium API) — `dist-firefox` strips `side_panel`/
+  `sidePanel` and sets the sidebar as the default surface. **Safari has no side panel at all** —
+  `dist-safari` restores the classic `default_popup`. Don't test Chromium panel flows in either.
 - **Double-decrement guard** — if the panel ticks the pomodoro locally (this one does), the
   service worker must treat `SIDE_PANEL` contexts like `POPUP` contexts and skip its own
   per-minute tick (`runtime.getContexts({ contextTypes: ['POPUP', 'SIDE_PANEL'] })`).

@@ -397,52 +397,65 @@ async function main() {
     const msgReply = await evalIn(`chrome.runtime.sendMessage({type:'GET_FOCUS_STATE'}).then(r => r && r.success)`);
     msgReply === true ? pass('SW message handler responds') : fail('SW message handler responds', String(msgReply));
 
-    console.log('\n--- 9b. Side panel (Chromium) ---');
-    // The toggle icon sits in the header actions, right after the theme toggle
-    // and before the focus toggle (Chrome only).
-    const spLayout = await evalIn(`(() => {
-      const actions = [...document.querySelectorAll('.header-actions > *')];
-      const byClass = (c) => actions.findIndex((b) => b.classList.contains(c));
-      const themeIdx = actions.findIndex(
-        (b) => b.classList.contains('theme-toggle') && (b.getAttribute('aria-label') || '').includes('dark mode'),
-      );
-      const spIdx = byClass('side-panel-toggle');
-      const focusIdx = byClass('focus-toggle');
-      return { found: spIdx !== -1, afterTheme: spIdx > themeIdx, beforeFocus: spIdx < focusIdx };
+    console.log('\n--- 9b. Side panel is the default surface (Chromium) ---');
+    // The manifest must NOT declare a popup — clicking the toolbar icon opens
+    // the side panel instead (SW action.onClicked → sidePanel.open).
+    const manifestInfo = await evalIn(`chrome.runtime.getManifest()`);
+    const noPopup = !manifestInfo.action?.default_popup;
+    const hasSidePanel = !!manifestInfo.side_panel;
+    noPopup && hasSidePanel
+      ? pass('manifest: no default_popup + side_panel declared (side panel is the default surface)')
+      : fail('manifest default surface', JSON.stringify({ noPopup, hasSidePanel, action: manifestInfo.action }));
+
+    // The old panel↔popup toggle icon must be gone from the header.
+    const toggleAbsent = await evalIn(`!document.querySelector('.side-panel-toggle')`);
+    toggleAbsent
+      ? pass('header has no side-panel toggle icon (removed)')
+      : fail('header has no side-panel toggle icon', 'toggle still present');
+
+    // Opening the panel requires a user gesture — CDP's userGesture:true
+    // provides one, exactly like a real toolbar click on the action button.
+    const currentWindowId = await evalIn(`chrome.windows.getCurrent().then(w => w.id)`);
+    const openResult = await evalIn(`(async () => {
+      try { await chrome.sidePanel.open({ windowId: ${currentWindowId} }); return 'ok'; }
+      catch (e) { return 'ERR: ' + e.message; }
     })()`);
-    spLayout.found && spLayout.afterTheme && spLayout.beforeFocus
-      ? pass(`side panel toggle after theme toggle (found=${spLayout.found}, afterTheme=${spLayout.afterTheme}, beforeFocus=${spLayout.beforeFocus})`)
-      : fail('side panel toggle placement', JSON.stringify(spLayout));
+    openResult === 'ok'
+      ? pass('chrome.sidePanel.open() succeeds with a user gesture')
+      : fail('chrome.sidePanel.open() succeeds', String(openResult));
 
-    // Clicking the toggle (user gesture) opens the panel — the panel page sets
-    // adhd_sidepanel_open on mount, which flips the header icon to active.
-    await clickAria('Open in side panel');
-    await waitFor(
-      `chrome.storage.local.get('adhd_sidepanel_open').then(r => r.adhd_sidepanel_open === true)`,
-      'side panel page mounted',
-      10000,
-    );
-    pass('toggle click opens the side panel');
-    await waitFor(
-      `document.querySelector('.side-panel-toggle')?.classList.contains('side-panel-toggle--active')`,
-      'toggle icon active',
-    );
-    pass('toggle icon reflects open state');
+    // The service worker must now see the SIDE_PANEL context — that is the
+    // guard that stops the pomodoro double-decrement while the panel is open.
+    const sawPanelCtx = await (async () => {
+      for (let i = 0; i < 40; i++) {
+        const c = await evalIn(`chrome.runtime.getContexts({ contextTypes: ['SIDE_PANEL'] }).then(c => c.length)`);
+        if (c > 0) return true;
+        await sleep(250);
+      }
+      return false;
+    })();
+    sawPanelCtx
+      ? pass('SW runtime.getContexts sees the SIDE_PANEL context (double-decrement guard)')
+      : fail('SW runtime.getContexts sees the SIDE_PANEL context', 'no SIDE_PANEL context');
 
-    // Simulate the panel closing (beforeunload clears the flag) — icon relaxes.
-    await evalIn(`chrome.storage.local.set({ adhd_sidepanel_open: false })`);
-    await waitFor(`!document.querySelector('.side-panel-toggle')?.classList.contains('side-panel-toggle--active')`, 'toggle icon inactive');
-    pass('toggle icon reflects closed state');
-
-    // The side panel surface renders the same app with a fluid layout.
+    // The side panel surface renders the same app with a fluid layout, and its
+    // Open-Tabs list fills the panel height with internal scrolling.
     const sidePanelUrl = `chrome-extension://${extId}/src/sidepanel/index.html`;
     const { targetId: spTarget } = await cdp.send('Target.createTarget', { url: sidePanelUrl });
     const { sessionId: spSid } = await cdp.send('Target.attachToTarget', { targetId: spTarget, flatten: true });
     await waitForSession(spSid, `!!document.querySelector('.app-header')`, 'side panel app header');
+    // Open the Tabs view so the tab list is mounted before inspecting it.
+    await evalInSession(spSid, `(() => { const t = [...document.querySelectorAll('.nav-tab')].find(e => (e.textContent||'').includes('Tabs')); if (t) t.click(); return !!t; })()`);
+    await waitForSession(spSid, `!!document.querySelector('.tab-group__list')`, 'side panel tab list');
     const spState = await evalInSession(spSid, `(() => ({
       nav: document.querySelectorAll('.nav-tab').length,
       fluid: document.body.classList.contains('sidepanel-body'),
-      heartbeat: null,
+      fullHeight: (() => {
+        const el = document.querySelector('.tab-group__list');
+        if (!el) return null;
+        const cs = getComputedStyle(el);
+        return { overflowY: cs.overflowY, maxHeight: cs.maxHeight, flex: cs.flexGrow };
+      })(),
     }))()`);
     spState.nav === 5
       ? pass('side panel renders all 5 nav tabs')
@@ -450,6 +463,10 @@ async function main() {
     spState.fluid
       ? pass('side panel uses the fluid sidepanel layout')
       : fail('side panel uses the fluid sidepanel layout', 'body missing sidepanel-body class');
+    const listScrolls = spState.fullHeight && spState.fullHeight.overflowY === 'auto' && spState.fullHeight.maxHeight === 'none';
+    listScrolls
+      ? pass(`side panel tab list fills the panel: overflowY=${spState.fullHeight?.overflowY}, maxHeight=${spState.fullHeight?.maxHeight}, flexGrow=${spState.fullHeight?.flex}`)
+      : fail('side panel tab list fills the panel', JSON.stringify(spState.fullHeight));
     const spHeartbeat = await evalInSession(spSid, `chrome.storage.local.get('adhd_popup_heartbeat').then(r => typeof r.adhd_popup_heartbeat === 'number')`);
     spHeartbeat
       ? pass('side panel writes the popup heartbeat (SW double-decrement guard)')

@@ -25,10 +25,13 @@ interface DailyQuoteProps {
  * The quote changes every 30 seconds to keep things fresh without being distracting.
  */
 export const DailyQuote: React.FC<DailyQuoteProps> = ({ stats }) => {
-  /** Current quote index for rotation */
+  /** Current quote index for rotation (modulo keeps it always in bounds) */
   const [quoteIndex, setQuoteIndex] = useState(() =>
     Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length),
   );
+
+  /** The currently displayed quote — guaranteed in bounds by the modulo */
+  const quote = MOTIVATIONAL_QUOTES[quoteIndex % MOTIVATIONAL_QUOTES.length]!;
 
   // Rotate quotes every 30 seconds
   useEffect(() => {
@@ -48,7 +51,10 @@ export const DailyQuote: React.FC<DailyQuoteProps> = ({ stats }) => {
       {/* Greeting and quote */}
       <div className="daily-quote__content">
         <p className="daily-quote__greeting">{getTimeGreeting()}! 👋</p>
-        <p className="daily-quote__text">{MOTIVATIONAL_QUOTES[quoteIndex]}</p>
+        <p className="daily-quote__text">{quote.text}</p>
+        <p className="daily-quote__source">
+          — Tao Te Ching, Ch. {quote.chapter}, v. {quote.verse}
+        </p>
       </div>
 
       {/* Daily progress summary — visual stats */}

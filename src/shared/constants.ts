@@ -43,10 +43,6 @@ export const STORAGE_KEYS = {
   /** Key for the popup heartbeat (ms timestamp). Lets the background page
    * detect an open popup on Firefox, which lacks runtime.getContexts. */
   POPUP_HEARTBEAT: 'adhd_popup_heartbeat',
-  /** Key for the side panel open flag (Chromium only) — the side panel page
-   * sets it on mount and clears it on unload so the popup header can reflect
-   * the panel state on its toggle icon. */
-  SIDE_PANEL_OPEN: 'adhd_sidepanel_open',
 } as const;
 
 /** Default Pomodoro timer durations in minutes */

@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "build:firefox": "vite build && node scripts/build-firefox.mjs",
-    "build:all": "tsc && vite build && node scripts/build-firefox.mjs",
+    "build": "tsc && vite build && node scripts/build-chrome.mjs",
+    "build:firefox": "vite build && node scripts/build-chrome.mjs && node scripts/build-firefox.mjs",
+    "build:all": "tsc && vite build && node scripts/build-chrome.mjs && node scripts/build-firefox.mjs",
+    "build:safari": "pnpm build:all && node scripts/build-safari.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

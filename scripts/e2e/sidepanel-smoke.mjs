@@ -1,17 +1,20 @@
 /**
- * Real-browser manual smoke for the Chrome side panel, driven against the
+ * Real-browser manual smoke for the side panel, driven against the
  * persistent test environment (start-test-env.mjs on :9222).
  *
- * Uses genuine CDP input events (Input.dispatchMouseEvent) for the side-panel
- * toggle click — `chrome.sidePanel.open()` requires a real user gesture, so a
- * scripted `el.click()` would be rejected.
+ * The side panel is now the DEFAULT surface on Chromium: the manifest has no
+ * `default_popup`, the toolbar click opens the panel via the service worker,
+ * and the old header toggle icon is gone. `chrome.sidePanel.open()` requires
+ * a real user gesture, so the script opens the panel from the popup page
+ * with CDP's userGesture:true — the same gesture a toolbar click provides.
  *
  * Verifies:
- *   - the toggle icon renders after the light/dark toggle, before Focus
- *   - a real click opens the panel (storage flag flips, panel page mounts)
+ *   - the manifest has no default_popup and the header has no toggle icon
+ *   - sidePanel.open() with a user gesture mounts the panel
+ *   - the SW context query sees the SIDE_PANEL context (double-decrement guard)
  *   - the panel renders the full app (header, 5 nav tabs, fluid layout)
+ *   - the Open-Tabs list fills the panel height (overflow-y auto, no x scroll)
  *   - the panel writes the popup heartbeat (SW double-decrement guard)
- *   - the popup header icon tracks the panel's open/closed state
  *   - theme changes in the panel propagate to the popup (no visual desync)
  *   - responsive widths in the panel (320 / 400 / 720 px) have no overflow
  *   - screenshots into artifacts/ for visual review
@@ -88,20 +91,6 @@ async function waitFor(cdp, sid, expression, label, timeoutMs = 12000) {
   throw new Error(`timed out waiting for ${label}`);
 }
 
-/** Real mouse click at the element's center — genuine user gesture. */
-async function realClick(cdp, sid, selector) {
-  const box = await evalIn(
-    cdp,
-    sid,
-    `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return null;
-      const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`,
-  );
-  if (!box) throw new Error(`element not found: ${selector}`);
-  await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: box.x, y: box.y, button: 'left', clickCount: 1 }, sid);
-  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: box.x, y: box.y, button: 'left', clickCount: 1 }, sid);
-  await sleep(300);
-}
-
 async function shot(cdp, sid, name) {
   const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' }, sid);
   const file = join(artifactsDir, `sidepanel-${name}.png`);
@@ -124,36 +113,18 @@ const cdp = new Cdp(version.webSocketDebuggerUrl);
 
 let panelSid = null;
 
-/* Clean slate: close leftover extension pages and clear a stale open flag so
- * the run is deterministic regardless of earlier manual/probe sessions. */
+/* Clean slate: close leftover extension pages so the run is deterministic. */
 {
   const { targetInfos } = await cdp.send('Target.getTargets');
   for (const t of targetInfos.filter((x) => x.type === 'page' && x.url.startsWith('chrome-extension://'))) {
     await cdp.send('Target.closeTarget', { targetId: t.targetId }).catch(() => {});
   }
-  await sleep(300);
-  const wake = await cdp.send('Target.createTarget', { url: `chrome-extension://${EXT_ID}/src/popup/index.html` });
-  await sleep(1500);
-  const { targetInfos: ti2 } = await cdp.send('Target.getTargets');
-  const sw = ti2.find((x) => x.type === 'service_worker');
-  const attach = sw
-    ? (await cdp.send('Target.attachToTarget', { targetId: sw.targetId, flatten: true })).sessionId
-    : (await cdp.send('Target.attachToTarget', { targetId: wake.targetId, flatten: true })).sessionId;
-  await cdp.send('Runtime.enable', {}, attach);
-  await evalIn(cdp, attach, `chrome.storage.local.set({ adhd_sidepanel_open: false })`);
-  const cleared = await evalIn(cdp, attach, `chrome.storage.local.get('adhd_sidepanel_open').then(r => r.adhd_sidepanel_open)`);
-  if (cleared === true) {
-    console.error('✗ Could not reset adhd_sidepanel_open — aborting.');
-    cdp.close();
-    process.exit(2);
-  }
-  await cdp.send('Target.closeTarget', { targetId: wake.targetId }).catch(() => {});
-  await sleep(300);
-  console.log('ℹ️  clean slate: stale extension pages closed, open flag reset');
+  await sleep(500);
+  console.log('ℹ️  clean slate: stale extension pages closed');
 }
 
 try {
-  /* --- 1. open the popup as a tab --- */
+  /* --- 1. open the popup page as a tab --- */
   const popupUrl = `chrome-extension://${EXT_ID}/src/popup/index.html`;
   const { targetId: popupTarget } = await cdp.send('Target.createTarget', { url: popupUrl });
   const { sessionId: popupSid } = await cdp.send('Target.attachToTarget', { targetId: popupTarget, flatten: true });
@@ -161,40 +132,48 @@ try {
   await cdp.send('Page.enable', {}, popupSid);
   await waitFor(cdp, popupSid, `!!document.querySelector('.app-header') && document.querySelectorAll('.nav-tab').length === 5`, 'popup render');
 
-  /* --- 2. header + toggle placement --- */
-  const placement = await evalIn(cdp, popupSid, `(() => {
-    const actions = [...document.querySelectorAll('.header-actions > *')];
-    const themeIdx = actions.findIndex(
-      (b) => b.classList.contains('theme-toggle') && (b.getAttribute('aria-label') || '').includes('dark mode'),
-    );
-    const spIdx = actions.findIndex((b) => b.classList.contains('side-panel-toggle'));
-    const focusIdx = actions.findIndex((b) => b.classList.contains('focus-toggle'));
-    return { found: spIdx !== -1, afterTheme: spIdx > themeIdx, beforeFocus: spIdx < focusIdx, count: actions.length };
-  })()`);
-  placement.found && placement.afterTheme && placement.beforeFocus
-    ? pass(`toggle after theme toggle, before Focus (${placement.count} header buttons)`)
-    : fail('toggle placement', JSON.stringify(placement));
+  /* --- 2. manifest + header: side panel is the default surface --- */
+  const manifestInfo = await evalIn(cdp, popupSid, `chrome.runtime.getManifest()`);
+  const noPopup = !manifestInfo.action?.default_popup;
+  noPopup
+    ? pass('manifest has no default_popup (toolbar click opens the side panel)')
+    : fail('manifest has no default_popup', JSON.stringify(manifestInfo.action));
+
+  const toggleAbsent = await evalIn(cdp, popupSid, `!document.querySelector('.side-panel-toggle')`);
+  toggleAbsent
+    ? pass('header has no panel↔popup toggle icon')
+    : fail('header has no panel↔popup toggle icon', 'toggle found');
+  const logoShown = await evalIn(cdp, popupSid, `!!document.querySelector('.header-icon-img')`);
+  logoShown ? pass('header shows the new logo image') : fail('header shows the new logo image', 'missing');
   await shot(cdp, popupSid, 'popup-header');
 
-  const themeBefore = await evalIn(cdp, popupSid, `chrome.storage.local.get('adhd_theme').then(r => r.adhd_theme ?? 'light')`);
-  console.log(`  ℹ️  current theme in storage: ${themeBefore}`);
-
-  /* --- 3. real click opens the panel --- */
-  await realClick(cdp, popupSid, '.side-panel-toggle');
-  await waitFor(
+  /* --- 3. open the panel with a user gesture (same as a toolbar click) --- */
+  const winId = await evalIn(cdp, popupSid, `chrome.windows.getCurrent().then(w => w.id)`);
+  const openResult = await evalIn(
     cdp,
     popupSid,
-    `chrome.storage.local.get('adhd_sidepanel_open').then(r => r.adhd_sidepanel_open === true)`,
-    'side panel page to mount',
-    10000,
+    `(async () => { try { await chrome.sidePanel.open({ windowId: ${winId} }); return 'ok'; } catch (e) { return 'ERR: ' + e.message; } })()`,
+    true,
   );
-  pass('real click opened the side panel (storage flag flipped)');
+  openResult === 'ok'
+    ? pass('chrome.sidePanel.open() succeeded with a user gesture')
+    : fail('chrome.sidePanel.open() succeeded', String(openResult));
 
-  await waitFor(cdp, popupSid, `document.querySelector('.side-panel-toggle')?.classList.contains('side-panel-toggle--active')`, 'toggle icon active');
-  pass('popup header icon reflects the open state');
-  await shot(cdp, popupSid, 'popup-toggle-active');
+  /* --- 4. the SW must see the SIDE_PANEL context (double-decrement guard) --- */
+  let panelCtxSeen = false;
+  for (let i = 0; i < 40 && !panelCtxSeen; i++) {
+    panelCtxSeen = await evalIn(
+      cdp,
+      popupSid,
+      `chrome.runtime.getContexts({ contextTypes: ['SIDE_PANEL'] }).then(c => c.length > 0)`,
+    );
+    if (!panelCtxSeen) await sleep(250);
+  }
+  panelCtxSeen
+    ? pass('SW runtime.getContexts sees the SIDE_PANEL context')
+    : fail('SW runtime.getContexts sees the SIDE_PANEL context', 'not found in 10s');
 
-  /* --- 4. find + attach the side panel page --- */
+  /* --- 5. find + attach the side panel page --- */
   let panelTarget = null;
   for (let i = 0; i < 20 && !panelTarget; i++) {
     const { targetInfos } = await cdp.send('Target.getTargets');
@@ -228,25 +207,33 @@ try {
   panelHeartbeat ? pass('panel writes the popup heartbeat (SW double-decrement guard)') : fail('panel heartbeat', 'missing');
   await shot(cdp, panelSid, 'panel-home');
 
-  /* --- 4b. SW double-decrement guard: getContexts must see the panel --- */
-  const contexts = await evalIn(
-    cdp,
-    popupSid,
-    `chrome.runtime.getContexts({ contextTypes: ['POPUP', 'SIDE_PANEL'] }).then((c) =>
-      c.map((x) => x.contextType).sort(),
-    )`,
-  );
-  Array.isArray(contexts) && contexts.includes('SIDE_PANEL')
-    ? pass(`SW context query sees the panel: ${contexts.join(', ')}`)
-    : fail('SW context query sees the panel', JSON.stringify(contexts));
+  /* --- 5b. Open-Tabs list fills the panel height with internal scroll --- */
+  await evalIn(cdp, panelSid, `(() => { const t = [...document.querySelectorAll('.nav-tab')].find(e => (e.textContent||'').includes('Tabs')); t?.click(); return true; })()`);
+  await waitFor(cdp, panelSid, `!!document.querySelector('.tab-group__list')`, 'tab list');
+  await sleep(300);
+  const listStyle = await evalIn(cdp, panelSid, `(() => {
+    const el = document.querySelector('.tab-group__list');
+    const cs = getComputedStyle(el);
+    const vh = window.innerHeight;
+    const listRect = el.getBoundingClientRect();
+    return { overflowY: cs.overflowY, overflowX: cs.overflowX, maxHeight: cs.maxHeight, listBottom: Math.round(listRect.bottom), vh };
+  })()`);
+  const listScrolls = listStyle.overflowY === 'auto' && listStyle.maxHeight === 'none' && listStyle.overflowX === 'hidden';
+  const fillsHeight = listStyle.listBottom >= listStyle.vh - 2;
+  listScrolls && fillsHeight
+    ? pass(`tab list fills the panel: overflowY=${listStyle.overflowY}, maxHeight=${listStyle.maxHeight}, bottom=${listStyle.listBottom}/${listStyle.vh}`)
+    : fail('tab list fills the panel', JSON.stringify(listStyle));
+  await shot(cdp, panelSid, 'panel-tabs-fullheight');
+  await evalIn(cdp, panelSid, `(() => { const t = [...document.querySelectorAll('.nav-tab')].find(e => (e.textContent||'').includes('Home')); t?.click(); return true; })()`);
+  await sleep(300);
 
-  /* --- 5. theme sync: toggle dark in the panel, popup follows --- */
+  /* --- 6. theme sync: toggle dark in the panel, popup follows --- */
   const popupTheme0 = await evalIn(cdp, popupSid, `document.documentElement.dataset.theme`);
   const wantDark = popupTheme0 !== 'dark';
   // NB: the Export/Import buttons also use the `.theme-toggle` class — target
   // the real theme button by its aria-label instead.
   const themeSel = wantDark ? '[aria-label="Switch to dark mode"]' : '[aria-label="Switch to light mode"]';
-  await realClick(cdp, panelSid, themeSel);
+  await evalIn(cdp, panelSid, `document.querySelector(${JSON.stringify(themeSel)})?.click(); true`, true);
   await sleep(400);
   const panelTheme = await evalIn(cdp, panelSid, `document.documentElement.dataset.theme`);
   const popupTheme = await evalIn(cdp, popupSid, `document.documentElement.dataset.theme`);
@@ -256,7 +243,7 @@ try {
     : fail('theme sync', JSON.stringify({ panelTheme, popupTheme, storedTheme, wantDark }));
   await shot(cdp, panelSid, 'panel-dark');
 
-  /* --- 6. responsive widths inside the panel --- */
+  /* --- 7. responsive widths inside the panel --- */
   let respOk = true;
   for (const [w, h, label] of [[320, 640, 'narrow'], [400, 700, 'standard'], [720, 700, 'wide']]) {
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false }, panelSid);
@@ -282,35 +269,11 @@ try {
   }
   await cdp.send('Emulation.clearDeviceMetricsOverride', {}, panelSid);
   await shot(cdp, panelSid, 'panel-responsive');
-
-  /* --- 7. icon tracks the closed state --- */
-  await evalIn(cdp, popupSid, `chrome.storage.local.set({ adhd_sidepanel_open: false })`);
-  await waitFor(cdp, popupSid, `!document.querySelector('.side-panel-toggle')?.classList.contains('side-panel-toggle--active')`, 'toggle icon inactive');
-  pass('icon relaxes when the panel closes');
-  await shot(cdp, popupSid, 'popup-toggle-inactive');
-
-  /* --- 8. closing the panel page clears the flag (beforeunload) --- */
-  await evalIn(cdp, popupSid, `chrome.storage.local.set({ adhd_sidepanel_open: true })`);
-  const { targetInfos } = await cdp.send('Target.getTargets');
-  const livePanel = targetInfos.find((t) => t.url.includes('/src/sidepanel/index.html'));
-  if (livePanel) {
-    await cdp.send('Target.closeTarget', { targetId: livePanel.targetId });
-    let cleared = false;
-    for (let i = 0; i < 25 && !cleared; i++) {
-      cleared = await evalIn(cdp, popupSid, `chrome.storage.local.get('adhd_sidepanel_open').then(r => r.adhd_sidepanel_open !== true)`);
-      if (!cleared) await sleep(200);
-    }
-    cleared
-      ? pass('closing the panel clears the storage flag (beforeunload)')
-      : fail('closing the panel clears the storage flag', 'flag still true after 5s');
-    panelSid = null; // target is gone; nothing to detach in finally
-  }
 } catch (err) {
   console.error(`\n❌ Smoke aborted: ${err.message}`);
   process.exitCode = 1;
 } finally {
   if (panelSid) {
-    // Closing the panel target lets beforeunload clear the storage flag.
     try {
       const { targetInfos } = await cdp.send('Target.getTargets');
       const p = targetInfos.find((t) => t.url.includes('/src/sidepanel/index.html'));

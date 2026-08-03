@@ -1,18 +1,84 @@
 /**
- * sidepanel.css — Overrides for the Chrome side panel surface.
+ * sidepanel.css — Overrides for the side panel surface (Chrome / Edge /
+ * Firefox sidebar).
  *
  * The popup is a fixed 400×580 shell (see popup.css); the side panel is a
  * persistent, user-resizable surface (typically 320–600px wide and full
- * height), so the body must fill the panel instead. Everything else is
- * inherited from the shared popup styles, keeping the two surfaces
- * pixel-identical in look and feel.
+ * height), so the body must fill the panel instead and behave like an app
+ * shell: header + nav stay pinned, the content area scrolls internally, and
+ * the Open-Tabs list fills the full available height with its own scroll.
+ * Everything else is inherited from the shared popup styles, keeping the two
+ * surfaces pixel-identical in look and feel.
  */
 
-/* Fill the panel instead of the popup's fixed-size shell */
+/* Fill the panel instead of the popup's fixed-size shell. The panel becomes
+ * a full-height flex column: header + nav pinned, content scrolls inside. */
 body.sidepanel-body {
   width: 100vw;
+  height: 100vh;
   min-height: 100vh;
   max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Carry the flex chain down to the content area so panels can size to the
+ * remaining viewport height (required for the full-height tab list). */
+body.sidepanel-body #root {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+body.sidepanel-body .popup-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+body.sidepanel-body .popup-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Non-Tabs panels scroll their own page content inside the shell. */
+body.sidepanel-body .tab-panel:not(#panel-tabs) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* The Tabs panel is an app-style column: the window sections and the tab
+ * cards fill the panel, and only the list itself scrolls. */
+body.sidepanel-body #panel-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body.sidepanel-body #panel-tabs .tab-group {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* THE key rule: the Open-Tabs list takes the entire remaining height and
+ * scrolls vertically; nothing may overflow horizontally. */
+body.sidepanel-body .tab-group__list {
+  max-height: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 16px;
 }
 
 /* When dragged very wide, keep the app column readable and centered */

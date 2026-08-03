@@ -137,7 +137,8 @@ const chromeTabs = {
 
 /**
  * Mock chrome.windows API — used by useTabs for window metadata +
- * current-window tracking, and by the popup for the side panel toggle.
+ * current-window tracking, and by the multi-window features (grouping,
+ * save-session window prompt, close-window action).
  */
 const chromeWindows = {
   getAll: vi.fn(async () => [

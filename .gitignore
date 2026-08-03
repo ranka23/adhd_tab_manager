@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 dist-firefox/
+dist-safari/
 web-ext-artifacts/
 
 # E2E test artifacts

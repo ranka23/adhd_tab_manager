@@ -31,25 +31,20 @@ export function isSidePanelSupported(): boolean {
 }
 
 /**
- * Opens the side panel for the given window (or closes it when the runtime
- * supports `close()` and the panel is already open). Must be called from a
- * user gesture on Chromium.
+ * Opens the side panel for the given window. Must be called from a user
+ * gesture on Chromium (e.g. the action-button `onClicked` event).
  *
  * @returns true when the API was available and the call did not throw.
  */
-export async function toggleSidePanel(windowId: number, isOpen: boolean): Promise<boolean> {
+export async function openSidePanel(windowId: number): Promise<boolean> {
   const ns = browser as BrowserWithSidePanel;
   const api = ns.sidePanel;
-  if (!api) return false;
+  if (!api || typeof api.open !== 'function') return false;
   try {
-    if (isOpen && typeof api.close === 'function') {
-      await api.close({ windowId });
-    } else {
-      await api.open({ windowId });
-    }
+    await api.open({ windowId });
     return true;
   } catch (err) {
-    console.warn('[ADHD Tab Manager] Failed to toggle the side panel:', err);
+    console.warn('[ADHD Tab Manager] Failed to open the side panel:', err);
     return false;
   }
 }

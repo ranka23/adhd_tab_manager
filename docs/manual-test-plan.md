@@ -366,5 +366,8 @@ Before tagging v1.0.0:
 
 ## Appendix B — Known benign findings (do not chase)
 
-- web-ext lint: `UNSAFE_VAR_ASSIGNMENT` / `innerHTML` warnings = react-dom internals; `MISSING_DATA_COLLECTION_PERMISSIONS` = benign (we collect no data).
+- web-ext lint: `UNSAFE_VAR_ASSIGNMENT` / `innerHTML` warnings = react-dom
+  internals (our source has zero `innerHTML` usage — grep `src/`);
+  `data_collection_permissions: { required: ["none"] }` is declared in the
+  manifest since we collect no data.
 - `.eslintrc.cjs` "File ignored by default" warning = ESLint never lints its own config; benign.

@@ -561,3 +561,19 @@ New lasting e2e script `scripts/e2e/donate-smoke.mjs` drives the live Chrome (CD
 - Verified locally: YAML parses (ruby), all new scripts `node --check` clean,
   `pnpm lint` 0, `create-zips.mjs` regenerates all 4 zips, release-body shell
   snippet produces correct markdown.
+
+## 24. AMO validation fix — data_collection_permissions (added 2026-08-03)
+
+- AMO now REJECTS new add-ons without
+  `browser_specific_settings.gecko.data_collection_permissions` (1 error, 0
+  notices). Added `{ required: ["none"] }` in `scripts/build-firefox.mjs` —
+  the extension collects no data (everything is local).
+- `pnpm lint:firefox` → **0 errors, 0 notices, 2 warnings**. The 2 warnings are
+  the known benign react-dom `innerHTML` internals (`e.innerHTML = t` HTML
+  path + `<svg>` wrapper in the minified bundle) — grep confirms zero
+  `innerHTML`/`dangerouslySetInnerHTML` usage in `src/`; they cannot be
+  silenced without patching react-dom and are safe (framework-controlled
+  values only).
+- Firefox zip regenerated + verified to carry the key. Docs updated:
+  `store-listing-firefox.md`, `RELEASE-NOTES.md`, `docs/manual-test-plan.md`
+  (Appendix B now reflects the declared data-collection permission).

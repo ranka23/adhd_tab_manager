@@ -79,6 +79,13 @@ manifest.browser_specific_settings = {
     // (nikhil@onefamili.com), per the project owner.
     id: 'nikhil@onefamili.com',
     strict_min_version: '121.0',
+    // Required for all NEW Firefox extensions (AMO error otherwise). The
+    // extension collects NO data — everything runs locally in the browser
+    // (no analytics, no tracking, no remote calls) — so we declare "none".
+    // https://mzl.la/firefox-builtin-data-consent
+    data_collection_permissions: {
+      required: ['none'],
+    },
   },
 };
 

@@ -400,15 +400,47 @@ console.info('ADHD Tab Manager background service worker started');
  * `browser.sidebarAction` member expression it can't resolve.
  */
 interface SidePanelLike {
-  sidePanel?: { open: (opts: { windowId?: number }) => Promise<void> | void };
+  sidePanel?: {
+    open: (opts: { windowId?: number }) => Promise<void> | void;
+    setPanelBehavior?: (opts: { openPanelOnActionClick: boolean }) => Promise<void>;
+  };
 }
 interface SidebarLike {
   sidebarAction?: { open: () => Promise<void> | void };
 }
 
+/**
+ * Tell Chrome to open the side panel natively when the toolbar icon is
+ * clicked (`openPanelOnActionClick`). This is the canonical mechanism for
+ * "side panel as the default surface": the browser itself handles the click
+ * with a real user gesture, so it is more reliable than re-opening the panel
+ * from an `action.onClicked` handler (which depends on the SW waking and the
+ * gesture propagating).
+ *
+ * Guarded through the aliased cast so the Firefox addons-linter never sees a
+ * literal `chrome.sidePanel` member expression. Firefox/Safari skip this call
+ * (no such API) and rely on their own native click behavior (`sidebar_action`
+ * / `default_popup`).
+ */
+function configurePanelBehavior(): void {
+  const sidePanelNs = browser as unknown as SidePanelLike;
+  if (typeof sidePanelNs.sidePanel?.setPanelBehavior === 'function') {
+    sidePanelNs.sidePanel
+      .setPanelBehavior({ openPanelOnActionClick: true })
+      .catch((err: unknown) => {
+        console.warn('[ADHD Tab Manager] Failed to set open-on-action-click panel behavior:', err);
+      });
+  }
+}
+
+// Run once when the service worker starts (and again on install/update below).
+configurePanelBehavior();
+
 browser.action.onClicked.addListener(async (tab) => {
-  // Chromium: the side panel is the default surface. Resolve the target
-  // window (the clicked tab's window; fall back to the last focused one).
+  // Chromium: the side panel is the default surface. With
+  // `openPanelOnActionClick` configured, Chrome already opens the panel
+  // natively and this handler rarely fires — it is a defensive fallback for
+  // older Chrome versions or if the panel behavior call above failed.
   const win = await browser.windows.getLastFocused().catch(() => null);
   const windowId: number | undefined = tab.windowId ?? win?.id ?? undefined;
   const sidePanelNs = browser as unknown as SidePanelLike;

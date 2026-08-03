@@ -16,6 +16,7 @@ import { SessionSaver } from './components/SessionSaver';
 import { DistractionBlocker } from './components/DistractionBlocker';
 import { DailyQuote } from './components/DailyQuote';
 import { QuickActions } from './components/QuickActions';
+import { DonateCard } from './components/DonateCard';
 import { useTabs } from './hooks/useTabs';
 import { useTimer } from './hooks/useTimer';
 import { useSessions } from './hooks/useSessions';
@@ -795,6 +796,10 @@ export const Popup: React.FC = () => {
                       onCloseAll={handleCloseAll}
                       isFocusMode={focusMode.isActive}
                     />
+                  </div>
+                  {/* Donate — the last section on the Home tab */}
+                  <div className="section">
+                    <DonateCard />
                   </div>
                 </div>
               )}

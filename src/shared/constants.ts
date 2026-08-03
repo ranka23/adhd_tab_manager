@@ -98,6 +98,26 @@ export const MAX_CLOSED_TABS_HISTORY = 20;
 export const MAX_SESSIONS = 50;
 
 /* ═══════════════════════════════════════════════════════
+ * DONATIONS & OPEN SOURCE
+ * ═══════════════════════════════════════════════════════ */
+
+/**
+ * Where the "Donate" button points. ADHD Tab Manager is free and open source;
+ * set this to your real donation page (Ko-fi / Buy Me a Coffee / GitHub
+ * Sponsors / Stripe) before submitting to the stores.
+ */
+export const DONATION_URL = 'https://ko-fi.com/adhd-tab-manager';
+
+/** Preset donation amounts shown as chips in the donation modal (USD). */
+export const DONATION_AMOUNTS = [1, 3, 5, 10] as const;
+
+/**
+ * The open-source repository page shown in the donation modal footer.
+ * Replace with the real repository URL once it is published.
+ */
+export const SOURCE_URL = 'https://github.com/adhd-tab-manager/adhd-tab-manager';
+
+/* ═══════════════════════════════════════════════════════
  * DEBUG LOGGING & STORAGE VERSION
  * ═══════════════════════════════════════════════════════ */
 

@@ -401,3 +401,48 @@ Removing `action.default_popup` from the source manifest silently dropped `src/p
 - `node scripts/e2e/sidepanel-smoke.mjs` → **14/14** · `node scripts/e2e/multiwindow-smoke.mjs` → **9/9**.
 - Real-browser (Chrome for Testing :9222): popup renders logo + cited quote; side panel list fills height and scrolls; 3-window close picker lists “Window 1/2/3 — N tabs · will close”.
 - Real Firefox 152 (`web-ext run`): `dist-firefox` installs as a temporary add-on with no errors.
+
+## 18. Submission Batch — toolbar-click fix, logo spacing, donations, store-listing (added 2026-08-03)
+
+### 18.1 Toolbar-click bug — root-caused and fixed
+
+**Reported:** clicking the extension icon did not open the side panel; only right-click → “Open Side Panel” worked.
+
+**Root cause (probed live over CDP on the extension's service worker):**
+- `chrome.action.getPopup({})` returned `""` (the `default_popup` strip was correct — clicks *do* fire `action.onClicked`),
+- but `chrome.sidePanel.getPanelBehavior()` returned **`{ openPanelOnActionClick: false }`** — the extension never configured Chrome's native “open the panel when the toolbar icon is clicked” behavior,
+- and `chrome.sidePanel.open()` throws *“may only be called in response to a user gesture”* outside a real gesture — making the `action.onClicked` fallback fragile.
+
+**Fix** (`src/background/service-worker.ts`): the service worker now calls
+`chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` at startup (aliased through the existing `SidePanelLike` cast so the Firefox addons-linter never sees a literal `chrome.sidePanel`). Chrome itself now opens the panel natively on a toolbar click — the canonical mechanism, with no gesture edge cases. The `action.onClicked` handler remains as a defensive fallback for older Chrome versions. Verified: `getPanelBehavior()` → `{ openPanelOnActionClick: true }`, `getPopup({})` → `""`.
+
+**Important for the user's real browser:** if the extension was loaded *before* this change, Chrome caches the old action config across “Reload” — the user must **Remove the extension and “Load unpacked” again** (or use a fresh profile). This is a Chrome unpacked-extension quirk, not a code path. Documented in README + `docs/manual-test-plan.md` §14.
+
+### 18.2 Logo spacing
+
+`public/icons/logo.svg`: the brain glyph's bottom arcs bulge ~3.7 units below its nominal 24×24 box, so `translate(0 10) scale(5.2)` (old) and even `translate(10 20) scale(4.5)` (previous batch) left the brain touching the tile's inner stroke at the bottom (9 px margin vs 19 px on the sides). Changed to **`translate(10 10) scale(4.5)`** — pixel-probed the rasterized `icon128.png` (decoded via `zlib` in Node): brain bbox x 19–108, y 19–108 → **symmetric 19 px margins on all four sides**. PNGs regenerated (`scripts/generate-icons.mjs`).
+
+### 18.3 Donations (Home tab, last section) 💜
+
+SideRouter donation assets were requested but **do not exist anywhere on this machine** (searched `*siderouter*`, `*donation*`, `*donate*` under `/Users/user`), so the donation feature was built from scratch with a clean, trending design:
+
+- **`DonateCard`** (`src/popup/components/DonateCard.tsx`) — the **last section on the Home tab** (“Support the Project”, pulsing 💜, “☕ Buy me a coffee” CTA).
+- **Donation modal**: gradient hero with an inline heart SVG asset, “Support ADHD Tab Manager” copy, **$1/$3/$5/$10 amount chips**, a “Donate $N” CTA that opens the donation page in a new tab (appends `?amount=N` for Ko-fi / Buy Me a Coffee), Cancel/Escape/overlay-click close, **focus trap**, and a “View source on GitHub” footer link (open source).
+- **Config**: `DONATION_URL`, `SOURCE_URL`, `DONATION_AMOUNTS` in `src/shared/constants.ts`. ⚠️ The defaults are placeholders — set the real Ko-fi/BMC/Sponsors URL and the real repository URL before store submission (checklist item in `docs/manual-test-plan.md` §16).
+- Tests: `tests/components/DonateCard.test.tsx` (6 tests). Verified live in real Chrome: card is the last Home section, modal opens, amounts select, CTA opens the donation tab, modal closes.
+
+### 18.4 Store-listing readiness (Chrome / Edge / Firefox / Safari)
+
+- Manifest `description` is now browser-neutral (“A browser extension…”) — previously said “A Chrome Extension”, which is wrong for AMO/Edge/Safari listings. Applied to `manifest.json` + `package.json`.
+- All four targets verified: `pnpm build:all` (dist/ + dist-firefox/) and `pnpm build:safari` (dist-safari/ popup surface) build clean; `pnpm lint:firefox` 0 errors.
+- README: new **Store listings** table (artifact per store + pre-submission notes), donation section, updated test counts, toolbar-click troubleshooting tip.
+- ⚠️ **Pre-submission (user action):** set real `DONATION_URL`/`SOURCE_URL`; replace the AMO `gecko.id` (`adhd-tab-manager@example.com`) with a real reverse-domain ID; Safari needs the `safari-web-extension-packager` wrapper (≈1–2 days, no code changes — see §11).
+
+### 18.5 Verification (all green)
+
+- `pnpm lint` clean · `pnpm test` **274/274** (268 + 6 new DonateCard) · `pnpm build:all` clean · `pnpm build:safari` clean · `pnpm lint:firefox` 0 errors (2 benign warnings, 1 notice).
+- `node scripts/e2e/chrome-e2e.mjs` → **50/50**.
+- `node scripts/e2e/manual-test.mjs` → **78/78** (incl. `MANUAL_TEST_SLOW=1`).
+- `node scripts/e2e/sidepanel-smoke.mjs` → **15/15** (new check: `openPanelOnActionClick === true`).
+- `node scripts/e2e/multiwindow-smoke.mjs` → **9/9**.
+- Real-browser (Chrome for Testing :9222): donate card + modal live-verified; logo margins pixel-verified; panel behavior probe verified.

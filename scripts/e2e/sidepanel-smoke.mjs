@@ -3,8 +3,10 @@
  * persistent test environment (start-test-env.mjs on :9222).
  *
  * The side panel is now the DEFAULT surface on Chromium: the manifest has no
- * `default_popup`, the toolbar click opens the panel via the service worker,
- * and the old header toggle icon is gone. `chrome.sidePanel.open()` requires
+ * `default_popup`, the toolbar click opens the panel natively
+ * (`sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` — Chrome's
+ * own mechanism, verified by this script) with a service-worker fallback, and
+ * the old header toggle icon is gone. `chrome.sidePanel.open()` requires
  * a real user gesture, so the script opens the panel from the popup page
  * with CDP's userGesture:true — the same gesture a toolbar click provides.
  *
@@ -138,6 +140,11 @@ try {
   noPopup
     ? pass('manifest has no default_popup (toolbar click opens the side panel)')
     : fail('manifest has no default_popup', JSON.stringify(manifestInfo.action));
+
+  const panelBehavior = await evalIn(cdp, popupSid, `chrome.sidePanel.getPanelBehavior()`);
+  panelBehavior?.openPanelOnActionClick === true
+    ? pass('panel behavior: openPanelOnActionClick=true (toolbar click opens the panel natively)')
+    : fail('panel behavior openPanelOnActionClick', JSON.stringify(panelBehavior));
 
   const toggleAbsent = await evalIn(cdp, popupSid, `!document.querySelector('.side-panel-toggle')`);
   toggleAbsent

@@ -266,7 +266,10 @@ Run the whole suite in Firefox (`about:debugging` → Load Temporary Add-on → 
 
 ## 14. Side panel — DEFAULT surface (Chrome / Edge) 🟢
 
-Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). The toolbar button opens the side panel directly (`action.onClicked` → `chrome.sidePanel.open`); there is **no floating popup** and **no header toggle icon**. Safari keeps the classic popup (see `scripts/build-safari.mjs` / `dist-safari`).
+Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). The toolbar button opens the side panel directly: the service worker calls
+`chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` at startup, so **Chrome itself** opens the panel natively on a toolbar click (with a fallback `action.onClicked` → `chrome.sidePanel.open` for older versions). There is **no floating popup** and **no header toggle icon**. Safari keeps the classic popup (see `scripts/build-safari.mjs` / `dist-safari`).
+
+> 💡 **Toolbar click does nothing?** This is almost always a stale unpacked extension — Chrome caches the old action config when the manifest changed. **Remove the extension from `chrome://extensions` and “Load unpacked” it again** (or use a fresh profile). Verify with the SW console: `chrome.action.getPopup({})` → `""` and `chrome.sidePanel.getPanelBehavior()` → `{ openPanelOnActionClick: true }`.
 
 | # | Test | Steps | Expected | Type |
 |---|---|---|---|---|
@@ -281,24 +284,42 @@ Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). The toolbar but
 | 14.9 | Resizable | Drag the panel wider/narrower | App fills the panel; no horizontal scrollbar; content centers at very wide widths (≥720px cap) | 📱 |
 | 14.10 | Narrow panel (320px) | Shrink panel to ~320px | No overflow; compact header still fits | 📱 |
 | 14.11 | Theme sync | Toggle theme in the panel, check popup (and vice-versa) | Both surfaces show the same theme instantly | 🟢 |
+| 14.12 | Toolbar-click regression | Fresh profile → click the toolbar icon | Panel opens natively; `sidePanel.getPanelBehavior()` → `openPanelOnActionClick: true`; `action.getPopup({})` → `""` | 🔴 |
 
 ---
 
-## 15. Release gate checklist
+## 15. Donations (Home tab) 💜
+
+| # | Test | Steps | Expected | Type |
+|---|---|---|---|---|
+| 15.1 | Card placement | Open Home tab | “Support the Project” card is the **last** section, after Quick Actions | 🟢 |
+| 15.2 | Open modal | Click “Buy me a coffee” | Modal opens: title, message, 4 amount chips ($1/$3/$5/$10), Donate CTA, GitHub footer link | 🟢 |
+| 15.3 | Amount select | Click a chip | Chip highlights; CTA label updates (e.g. “Donate $10”) | 🟢 |
+| 15.4 | Donate action | Select $10 → Donate | A new tab opens with the donation URL (`DONATION_URL` from `src/shared/constants.ts`, `?amount=10` for Ko-fi/BMC); modal closes | 🔴 |
+| 15.5 | Cancel / Escape | Open modal → Cancel (or Esc) | Modal closes; focus returns to the card button; nothing opens | 🟢 |
+| 15.6 | Overlay click | Open modal → click the dark overlay | Modal closes; clicking INSIDE the dialog does NOT close it | ⚠️ |
+| 15.7 | Focus trap | Tab through the modal | Focus stays inside the dialog until dismissed | ⚠️ |
+| 15.8 | Open-source link | Open modal → “View source on GitHub” | Opens `SOURCE_URL` in a new tab (`target=_blank`, `rel=noreferrer`) | 🟢 |
+| 15.9 | Responsive | Repeat at 320px/400px | Card + modal fit; no overflow | 📱 |
+
+---
+
+## 16. Release gate checklist
 
 Before tagging v1.0.0:
 
 - [x] `pnpm lint` → 0 problems
-- [x] `pnpm test` → all pass (268)
+- [x] `pnpm test` → all pass (274)
 - [x] `pnpm build:all` → clean (dist/ + dist-firefox/)
 - [x] `pnpm build:safari` → clean (dist-safari/, popup surface, no side panel)
 - [x] `pnpm lint:firefox` → 0 errors
 - [x] `node scripts/e2e/chrome-e2e.mjs` → 50/50
 - [x] `node scripts/e2e/manual-test.mjs` → 78/78 (incl. `MANUAL_TEST_SLOW=1`)
-- [x] `node scripts/e2e/sidepanel-smoke.mjs` → 14/14
+- [x] `node scripts/e2e/sidepanel-smoke.mjs` → 15/15
 - [x] `node scripts/e2e/multiwindow-smoke.mjs` → 9/9
 - [x] Sections 1–12 machine-verified (all 🔴 items green)
-- [ ] Section 13 Firefox sidebar + §14 side-panel default + toolbar/notification/file-picker — human pass required
+- [ ] Section 13 Firefox sidebar + §14 side-panel default + §15 donations — human pass required
+- [ ] **Pre-submission:** set real `DONATION_URL` / `SOURCE_URL` (`src/shared/constants.ts`) and the real AMO `gecko.id` (`dist-firefox/manifest.json`)
 - [x] `git status` clean; version bumped; README updated
 - [ ] (Optional) Tag `v1.0.0`
 

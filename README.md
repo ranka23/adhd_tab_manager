@@ -36,10 +36,16 @@ A Chrome Extension designed specifically for ADHD brains — minimal clutter, on
 - Undo-close restores tabs into their original window
 
 ### 📌 Side Panel (default surface — Chrome / Edge / Firefox)
-- **The toolbar button opens the side panel directly** — no floating popup (Chrome/Edge `sidePanel`, Firefox `sidebar_action`)
+- **The toolbar button opens the side panel directly** — no floating popup (Chrome/Edge `sidePanel` + `setPanelBehavior({ openPanelOnActionClick: true })`, Firefox `sidebar_action`)
 - Same features as the popup in a persistent, resizable surface; theme and state stay in sync across surfaces
 - The Open-Tabs list fills the panel height and scrolls internally
 - **Safari** (no side panel API) keeps the classic toolbar popup — `pnpm build:safari` → `dist-safari/`
+
+### 💜 Donations & Open Source
+- Free and open source (MIT)
+- A **Donate** card is the last section on the Home tab — opens a donation modal with preset amounts
+- The donation target is configurable via `DONATION_URL` in `src/shared/constants.ts` (set it to your Ko-fi / Buy Me a Coffee / GitHub Sponsors page before submitting)
+- The modal footer links to the open-source repository (`SOURCE_URL`, same constants file)
 
 ### 📊 Daily Motivation
 - Rotating **Tao Te Ching quotes** — each one cites its chapter and verse (e.g. “— Tao Te Ching, Ch. 8, v. 1”)
@@ -72,7 +78,7 @@ This extension follows ADHD-specific design principles:
 pnpm build:all
 pnpm build:safari   # adds dist-safari/ (popup surface, no side panel)
 
-# Run unit/integration tests (268)
+# Run unit/integration tests (274)
 pnpm test
 
 # Lint
@@ -97,7 +103,7 @@ node scripts/e2e/manual-test.mjs
 # + the ~60s service-worker tick test (timer completes with popup closed)
 MANUAL_TEST_SLOW=1 node scripts/e2e/manual-test.mjs
 
-# Side-panel + multi-window smoke suites
+# Side-panel (15 checks) + multi-window (9 checks) smoke suites
 node scripts/e2e/sidepanel-smoke.mjs
 node scripts/e2e/multiwindow-smoke.mjs
 
@@ -117,6 +123,25 @@ Results: `docs/manual-test-results.md`, `docs/manual-test-plan.md`, `adhd-prod-t
 6. Pin the extension and click the toolbar icon → the **side panel** opens (the default surface).
    For Firefox use `about:debugging` → Load Temporary Add-on → `dist-firefox/manifest.json`
    (the toolbar button opens the sidebar).
+
+> 💡 **Toolbar click not opening the side panel?** If you loaded the extension
+> *before* the side-panel change, Chrome caches the old action config —
+> **Remove the extension and click “Load unpacked” again** (or use a fresh
+> profile). The current build opens the panel natively on click via
+> `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`.
+
+## Store listings
+
+| Store | Artifact | Notes |
+|---|---|---|
+| Chrome Web Store | `dist/` | ZIP `dist/`; MV3 service worker + side panel. Screenshots: popup & side panel. No special permissions beyond `tabs`/`storage`/`alarms`/`notifications`/`sidePanel`. |
+| Edge Add-ons | `dist/` | Same ZIP as Chrome; Edge accepts Chromium MV3 extensions. |
+| Firefox AMO | `dist-firefox/` | ZIP `dist-firefox/`; event-page background. **Replace `browser_specific_settings.gecko.id` (`adhd-tab-manager@example.com`) with your real reverse-domain ID before submitting.** |
+| Safari | `dist-safari/` | Requires the Safari Web Extension Converter/packager (`safari-web-extension-packager` or App Store Connect) — no code changes needed; the popup is the only surface. |
+
+Store copy: the extension collects **no data**; state lives entirely in local
+`chrome.storage`. Mention that in each store's privacy section. Donation link
+(Home tab → “Buy me a coffee”) is configurable in `src/shared/constants.ts`.
 
 ## Tech Stack
 
@@ -146,4 +171,4 @@ src/
 
 ## License
 
-MIT
+MIT — free, open source, and donation-supported. 💜

@@ -124,6 +124,18 @@ curl -s -X POST "https://oauth2.googleapis.com/token" \
 If the consent page says *"Google hasn't verified this app"*, click
 **Advanced → Continue** — normal for an unverified but harmless client.
 
+**Troubleshooting — `Error 403: access_denied` / "has not completed the Google
+verification process… only be accessed by developer-approved testers"**:
+this means the consent screen is still in **Testing** status. You do **not**
+need Google verification (the `chromewebstore` scope is non-sensitive).
+Either:
+- **Publish to production** (recommended): Google Auth Platform → Audience →
+  **Publishing status** → **Publish app** → confirm. Re-run the URL; the 403 is
+  gone and the refresh token never expires.
+- Or add the approving Google account as a **Test user** (Audience →
+  **Test users** → **Add users**) — but then the refresh token expires after
+  7 days and must be re-generated weekly.
+
 ### 4d. Get the item id (Chrome Web Store dashboard, one manual upload)
 
 1. Go to https://chrome.google.com/webstore/devconsole/ → **Add new item** →

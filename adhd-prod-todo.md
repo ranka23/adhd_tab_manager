@@ -202,8 +202,8 @@ Load `dist/` via `chrome://extensions` → Load unpacked, then:
 
 ### 8.2 Firefox — ✅ supported (MV3 event page)
 - Firefox rejects Chrome's `service_worker` + `type: module` background shape (addons-linter error). The Firefox artifact therefore uses an **event page**: `background.scripts: ["background.js"]`, where `background.js` is an esbuild-bundled **IIFE** (classic script, no top-level import/export) of `src/background/service-worker.ts`.
-- `scripts/build-firefox.mjs` copies `dist/` → `dist-firefox/`, bundles the event page, adds `browser_specific_settings.gecko` (`id: adhd-tab-manager@example.com`, `strict_min_version: 121.0`), strips the Chrome `key`, and removes the Chromium SW loader.
-- `pnpm build:firefox` / `pnpm build:all` produce it; `pnpm lint:firefox` (web-ext lint) passes with **0 errors** (2 benign `UNSAFE_VAR_ASSIGNMENT` warnings — react-dom internals, false positives; 1 `MISSING_DATA_COLLECTION_PERMISSIONS` notice — we collect no data).
+- `scripts/build-firefox.mjs` copies `dist/` → `dist-firefox/`, bundles the event page, adds `browser_specific_settings.gecko` (`id: nikhil@onefamili.com`, `strict_min_version: 140.0`, `data_collection_permissions: { required: ["none"] }`) + `gecko_android` (`strict_min_version: 142.0`), strips the Chrome `key`, and removes the Chromium SW loader.
+- `pnpm build:firefox` / `pnpm build:all` produce it; `pnpm lint:firefox` (web-ext lint) passes with **0 errors, 0 notices** (2 benign `UNSAFE_VAR_ASSIGNMENT` warnings — react-dom internals, false positives; `data_collection_permissions` is declared since we collect no data).
 - Load: `about:debugging#/runtime/this-firefox` → Load Temporary Add-on → `dist-firefox/manifest.json`, or `pnpm exec web-ext run --source-dir dist-firefox`.
 
 ### 8.3 Cross-browser API layer
@@ -577,3 +577,18 @@ New lasting e2e script `scripts/e2e/donate-smoke.mjs` drives the live Chrome (CD
 - Firefox zip regenerated + verified to carry the key. Docs updated:
   `store-listing-firefox.md`, `RELEASE-NOTES.md`, `docs/manual-test-plan.md`
   (Appendix B now reflects the declared data-collection permission).
+
+## 25. AMO warnings cleared — min versions raised for data_collection_permissions (added 2026-08-03)
+
+- addons-linter warned the manifest key `data_collection_permissions` is not
+  supported by the pinned minimum: desktop 121 < 140, Android 121 < 142.
+- Fixed in `scripts/build-firefox.mjs`: `gecko.strict_min_version` → `140.0`,
+  added `gecko_android.strict_min_version` → `142.0` (Firefox for Android has
+  its own minimum-version warning otherwise).
+- `pnpm lint:firefox` → **0 errors, 0 notices, 2 warnings** — the only
+  remaining warnings are the benign react-dom `innerHTML` internals (see §24;
+  our source has zero `innerHTML` usage, they cannot be silenced without
+  patching react-dom, and warnings do not block AMO submission).
+- All 4 zips regenerated; Firefox zip verified (140.0 / 142.0 /
+  data_collection_permissions). Docs updated: `store-listing-firefox.md`,
+  `adhd-prod-todo.md` §8.

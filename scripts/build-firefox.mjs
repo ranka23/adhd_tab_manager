@@ -78,7 +78,10 @@ manifest.browser_specific_settings = {
     // reverse-DNS string is REJECTED. The id is the developer's contact email
     // (nikhil@onefamili.com), per the project owner.
     id: 'nikhil@onefamili.com',
-    strict_min_version: '121.0',
+    // data_collection_permissions (required for new AMO add-ons) is supported
+    // from Firefox 140 — so the minimum must be >= 140 or addons-linter warns
+    // "manifest key not supported by the specified minimum version".
+    strict_min_version: '140.0',
     // Required for all NEW Firefox extensions (AMO error otherwise). The
     // extension collects NO data — everything runs locally in the browser
     // (no analytics, no tracking, no remote calls) — so we declare "none".
@@ -86,6 +89,11 @@ manifest.browser_specific_settings = {
     data_collection_permissions: {
       required: ['none'],
     },
+  },
+  // Firefox for Android supports data_collection_permissions only from 142
+  // (gecko_android has its own minimum-version warning otherwise).
+  gecko_android: {
+    strict_min_version: '142.0',
   },
 };
 

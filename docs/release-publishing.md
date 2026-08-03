@@ -99,6 +99,10 @@ forever.
    `POST /items` once, but the dashboard is easier.)
 6. Set the **listing text + screenshots once** in the dashboard (copy from
    `docs/STORE-LISTING.md` + `docs/screenshots/`).
+7. Set the **privacy policy URL** (required field on the item edit page) to:
+   `https://github.com/ranka23/adhd_tab_manager/blob/main/docs/PRIVACY-POLICY.md`
+   (full copy in `docs/store-privacy-practices.md` §4 — the policy is committed
+   at `docs/PRIVACY-POLICY.md`).
 
 Add GitHub secrets:
 

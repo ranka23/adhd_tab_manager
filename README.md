@@ -283,6 +283,9 @@ Nothing is sent anywhere; the only network-bound action is when *you* click a
 link (GitHub Issues, the open-source repo). The background service worker
 redirects blocked sites to a local interstitial page — no remote calls.
 
+Full privacy policy:
+[`docs/PRIVACY-POLICY.md`](https://github.com/ranka23/adhd_tab_manager/blob/main/docs/PRIVACY-POLICY.md)
+
 ## 🤝 Contributing
 
 Found a bug or want a feature? Open an

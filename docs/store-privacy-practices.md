@@ -100,3 +100,16 @@ during review.)
 **Privacy promise (from the README):** "ADHD Tab Manager collects no data.
 Everything runs locally in your browser — no accounts, no analytics, no
 tracking, no remote servers."
+
+---
+
+## 4. Privacy policy URL (required field on the CWS edit page)
+
+Chrome requires a **privacy policy URL** in the listing. Use the committed,
+rendered policy on GitHub (no extra hosting needed):
+
+```
+https://github.com/ranka23/adhd_tab_manager/blob/main/docs/PRIVACY-POLICY.md
+```
+
+The full policy lives at `docs/PRIVACY-POLICY.md` in the repository.

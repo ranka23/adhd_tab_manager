@@ -87,6 +87,11 @@ reachable without losing your place. On Safari it runs as a classic popup.
 your browser — no accounts, no analytics, no tracking, no remote servers.
 The focus blocker intercepts sites locally; nothing ever leaves your device.
 
+**Privacy policy URL (Chrome/Edge submission):**
+`https://github.com/ranka23/adhd_tab_manager/blob/main/docs/PRIVACY-POLICY.md`
+(full policy committed at `docs/PRIVACY-POLICY.md`; for Firefox/AMO, add the
+same URL to the add-on's Privacy Policy field on the AMO edit page).
+
 ## 🖼️ Screenshot mapping (upload in this order)
 
 Screenshots live in `docs/screenshots/` (committed so CI releases can attach them).

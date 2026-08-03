@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { TimerState, TimerSettings } from '../types';
 import * as timerService from '../services/timerService';
 import { createDefaultTimerState } from '../utils/helpers';
+import { STORAGE_KEYS } from '../../shared/constants';
+import { browser } from '../../shared/browser';
 
 /** Return type for the useTimer hook */
 interface UseTimerReturn {
@@ -78,6 +80,31 @@ export function useTimer(): UseTimerReturn {
     init();
   }, []);
 
+  /* LIVE DATA — mirror timer state + settings from storage so the popup and
+   * the side panel (which may be open simultaneously) always show the same
+   * countdown. The local ticker writes to storage every second; this listener
+   * only mirrors, it never ticks, so there is no double-decrement. */
+  useEffect(() => {
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ): void => {
+      if (area !== 'local') return;
+      const stateChange = changes[STORAGE_KEYS.ACTIVE_TIMER];
+      if (stateChange && stateChange.newValue) {
+        setState(stateChange.newValue as TimerState);
+      }
+      const settingsChange = changes[STORAGE_KEYS.TIMER_SETTINGS];
+      if (settingsChange && settingsChange.newValue) {
+        setSettings(settingsChange.newValue as TimerSettings);
+      }
+    };
+    browser.storage.onChanged.addListener(onChanged);
+    return (): void => {
+      browser.storage.onChanged.removeListener(onChanged);
+    };
+  }, []);
+
   /**
    * Persist timer state to chrome.storage.session when the popup is hidden.
    * This ensures the timer remaining time survives service worker restarts.
@@ -99,6 +126,11 @@ export function useTimer(): UseTimerReturn {
   useEffect(() => {
     if (state.isRunning && state.remainingSeconds > 0) {
       tickRef.current = setInterval(async () => {
+        // If the popup AND the side panel are both open, only the popup may
+        // tick — otherwise the timer would run at double speed. The other
+        // surface mirrors state via the storage listener below.
+        if (!(await shouldOwnTick())) return;
+
         const newState = await timerService.tickTimer();
         setState(newState);
 
@@ -222,6 +254,32 @@ export function useTimer(): UseTimerReturn {
     skipPhase,
     updateSettings,
   };
+}
+
+/**
+ * Whether THIS surface (popup or side panel) should own the local 1-second
+ * pomodoro tick. When the popup and side panel are both open at once, both
+ * would otherwise decrement the shared timer → double speed. The popup is the
+ * primary surface and owns the tick; the side panel mirrors via storage.
+ *
+ * On Firefox/older Chrome there is no runtime.getContexts, and only one timer
+ * surface can exist at a time anyway (no side panel in Firefox), so always true.
+ */
+async function shouldOwnTick(): Promise<boolean> {
+  const runtime = browser.runtime as unknown as {
+    getContexts?: (filter: { contextTypes: string[] }) => Promise<Array<{ type?: string }>>;
+  };
+  if (typeof runtime.getContexts !== 'function') return true;
+  try {
+    const contexts = await runtime.getContexts({ contextTypes: ['POPUP', 'SIDE_PANEL'] });
+    if (contexts.length <= 1) return true;
+    const isPopup =
+      typeof document !== 'undefined' &&
+      (document.URL.includes('/popup/') || document.URL.endsWith('/popup/index.html'));
+    return isPopup;
+  } catch {
+    return true;
+  }
 }
 
 /**

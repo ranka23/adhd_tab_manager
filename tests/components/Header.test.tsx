@@ -14,6 +14,8 @@ interface HeaderProps {
   onToggleDarkMode: () => void;
   onExport?: () => void;
   onImport?: () => void;
+  isSidePanelOpen?: boolean;
+  onToggleSidePanel?: () => void;
 }
 
 /** Renders Header with defaults and returns the props used. */
@@ -24,6 +26,8 @@ const renderHeader = (partial: {
   onToggleDarkMode?: () => void;
   onExport?: () => void;
   onImport?: () => void;
+  isSidePanelOpen?: boolean;
+  onToggleSidePanel?: () => void;
 } = {}): { props: HeaderProps } => {
   const props: HeaderProps = {
     isFocusMode: partial.isFocusMode ?? false,
@@ -36,6 +40,12 @@ const renderHeader = (partial: {
   }
   if (partial.onImport) {
     props.onImport = partial.onImport;
+  }
+  if (partial.isSidePanelOpen !== undefined) {
+    props.isSidePanelOpen = partial.isSidePanelOpen;
+  }
+  if (partial.onToggleSidePanel) {
+    props.onToggleSidePanel = partial.onToggleSidePanel;
   }
   render(<Header {...props} />);
   return { props };
@@ -91,5 +101,27 @@ describe('Header', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Import data' }));
     expect(onExport).toHaveBeenCalledTimes(1);
     expect(onImport).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the side panel toggle only when onToggleSidePanel is provided', () => {
+    renderHeader();
+    expect(screen.queryByRole('button', { name: 'Open in side panel' })).not.toBeInTheDocument();
+  });
+
+  it('renders the side panel toggle and calls onToggleSidePanel when clicked', () => {
+    const onToggleSidePanel = vi.fn();
+    renderHeader({ onToggleSidePanel });
+    const button = screen.getByRole('button', { name: 'Open in side panel' });
+    expect(button).not.toHaveClass('side-panel-toggle--active');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(button);
+    expect(onToggleSidePanel).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the side panel toggle active when the panel is open', () => {
+    renderHeader({ onToggleSidePanel: vi.fn(), isSidePanelOpen: true });
+    const button = screen.getByRole('button', { name: 'Open in side panel' });
+    expect(button).toHaveClass('side-panel-toggle--active');
+    expect(button).toHaveAttribute('aria-pressed', 'true');
   });
 });

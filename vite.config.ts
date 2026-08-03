@@ -22,6 +22,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: 'src/popup/index.tsx',
+        sidepanel: 'src/sidepanel/index.tsx',
       },
     },
   },

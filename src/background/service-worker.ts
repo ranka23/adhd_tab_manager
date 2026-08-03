@@ -198,24 +198,25 @@ async function handleAutoSave(): Promise<void> {
 }
 
 /**
- * Returns true when a popup page is currently open.
- * Used to avoid double-decrementing the pomodoro timer: when the popup is
- * open it ticks locally every second, so the service worker must skip its
- * own once-per-minute decrement to prevent the timer from running fast.
+ * Returns true when a page that ticks the pomodoro locally is open (the
+ * popup or the side panel).
+ * Used to avoid double-decrementing the timer: when such a page is open it
+ * ticks every second, so the service worker must skip its own once-per-minute
+ * decrement to prevent the timer from running fast.
  *
  * Chrome 116+ can query contexts directly (runtime.getContexts). Firefox
  * event pages lack that API, so it falls back to the popup heartbeat: the
  * popup writes STORAGE_KEYS.POPUP_HEARTBEAT (a ms timestamp) every 30s while
- * open, and a heartbeat fresher than POPUP_HEARTBEAT_STALE_MS means the
- * popup is up.
+ * open, and a heartbeat fresher than POPUP_HEARTBEAT_STALE_MS means a
+ * timer surface is up.
  */
-async function isPopupOpen(): Promise<boolean> {
+async function isTimerSurfaceOpen(): Promise<boolean> {
   const runtime = browser.runtime as unknown as {
     getContexts?: (filter: { contextTypes: string[] }) => Promise<unknown[]>;
   };
   if (typeof runtime.getContexts === 'function') {
     try {
-      const contexts = await runtime.getContexts({ contextTypes: ['POPUP'] });
+      const contexts = await runtime.getContexts({ contextTypes: ['POPUP', 'SIDE_PANEL'] });
       return contexts.length > 0;
     } catch (err) {
       console.warn('[ADHD Tab Manager] Failed to check popup context:', err);
@@ -240,9 +241,9 @@ async function isPopupOpen(): Promise<boolean> {
  */
 async function handlePomodoroTick(): Promise<void> {
   try {
-    // The popup ticks the timer itself every second while open — skip to
-    // avoid a double-decrement race that would make the timer run fast.
-    if (await isPopupOpen()) {
+    // The popup/side panel ticks the timer itself every second while open —
+    // skip to avoid a double-decrement race that would make the timer run fast.
+    if (await isTimerSurfaceOpen()) {
       return;
     }
 

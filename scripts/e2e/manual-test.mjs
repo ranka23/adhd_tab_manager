@@ -5,12 +5,7 @@
  * Executes the human-testable matrix from docs/manual-test-plan.md against the
  * running test environment (start-test-env.mjs → Chrome for Testing on :9222)
  * by driving the REAL popup over CDP: clicking real buttons, typing into real
- * inputs, creating/observing real tabs, and reading real storage.
- *
- * Items that the automated chrome-e2e.mjs harness already covers (32 checks)
- * are re-verified here only when cheap; each check records PASS/FAIL and a
- * screenshot on failure. Results are written to artifacts/manual/results.json
- * and docs/manual-test-results.md.
+ * inputs, creating/observing real tabs and windows, and reading real storage.
  *
  * Usage:
  *   node scripts/e2e/manual-test.mjs                      # full run (fast)
@@ -1463,18 +1458,26 @@ await check('7.2', 'Undo many — 3 tabs restored', '🟢', async () => {
   await sleep(200);
   for (let i = 0; i < 3; i++) {
     await clickBtn('Undo Close');
-    await sleep(350);
+    await sleep(150);
   }
-  const restoredCount = (await allTabs()).filter((t) =>
-    domains.some((d) => {
-      try {
-        return new URL(t.url).hostname === d;
-      } catch {
-        return false;
-      }
-    }),
-  ).length;
-  assert(restoredCount === 3, `restored=${restoredCount}`);
+  // chrome.tabs.create resolves before the URL commits — wait for the
+  // committed count instead of sampling once (flaky under load otherwise).
+  await waitFor(
+    async () => {
+      const tabs = await allTabs();
+      const n = tabs.filter((t) =>
+        domains.some((d) => {
+          try {
+            return new URL(t.url).hostname === d;
+          } catch {
+            return false;
+          }
+        }),
+      ).length;
+      return n === 3 ? n : false;
+    },
+    { timeout: 8000, label: '3 tabs restored' },
+  );
   return '3/3 restored';
 });
 
@@ -1846,10 +1849,16 @@ await check('9.4', 'Confirm closes all non-pinned tabs', '🔴', async () => {
 await check('9.5', 'Undo restores all closed tabs', '🔴', async () => {
   for (let i = 0; i < 3; i++) {
     await clickBtn('Undo Close');
-    await sleep(400);
+    await sleep(150);
   }
-  const restored = (await allTabs()).filter((t) => t.url.includes('example.')).length;
-  assert(restored === 3, `restored=${restored}`);
+  // Same commit-lag caveat as 7.2 — wait for the committed count.
+  await waitFor(
+    async () => {
+      const n = (await allTabs()).filter((t) => t.url.includes('example.')).length;
+      return n === 3 ? n : false;
+    },
+    { timeout: 8000, label: '3 restored' },
+  );
   return '3/3 restored';
 });
 
@@ -2043,6 +2052,102 @@ await check('11.3', 'Touch targets ≥ 40px (primary actions)', '📱', async ()
   assert(heights.length > 0, 'no primary actions found');
   assert(heights.every((h) => h >= 40), `heights=${JSON.stringify(heights)}`);
   return `heights=${JSON.stringify(heights)}`;
+});
+
+/* ============================================================
+ * 12. MULTI-WINDOW & LIVE DATA
+ * ============================================================ */
+await resetState();
+section('12. Multi-window & live data');
+
+await check('12.1', 'Live — creating a tab outside the popup updates the UI', '🟢', async () => {
+  await clickSel('#tab-tabs');
+  await waitFor(() => pe(`!!document.querySelector('.tab-group__count')`), { label: 'tab count' });
+  const before = await pe(`document.querySelector('.tab-group__count').textContent`);
+  const id = await pe(`chrome.tabs.create({ url: 'https://live-manual.example.com/' }).then(t => t.id)`);
+  await waitFor(
+    () => pe(`document.querySelector('.tab-group__count').textContent === '${Number(before) + 1}'`),
+    { timeout: 8000, label: 'count increments without reload' },
+  );
+  const appears = await pe(
+    `[...document.querySelectorAll('.tab-card__domain')].some(e => (e.textContent||'').includes('live-manual'))`,
+  );
+  assert(appears, 'new tab card not rendered');
+  await pe(`chrome.tabs.remove(${id})`);
+  await waitFor(
+    () => pe(`document.querySelector('.tab-group__count').textContent === '${before}'`),
+    { timeout: 8000, label: 'count returns after close' },
+  );
+  return `count ${before} → ${Number(before) + 1} → ${before} (no reload)`;
+});
+
+await check('12.2', 'Two windows → tabs grouped per window + current marker', '🔴', async () => {
+  await pe(`chrome.windows.create({ url: 'https://win2-manual.example.com/', focused: false }).then(() => true)`);
+  await waitFor(() => pe(`chrome.windows.getAll().then(ws => ws.length === 2)`), {
+    timeout: 8000,
+    label: 'second window open',
+  });
+  await waitFor(() => pe(`document.querySelectorAll('.tab-group__window').length === 2`), {
+    timeout: 8000,
+    label: 'two window sections',
+  });
+  const labels = await pe(
+    `[...document.querySelectorAll('.tab-group__window-label')].map(e => e.textContent.trim())`,
+  );
+  assert(labels.join() === 'Window 1,Window 2', `labels=${labels.join(',')}`);
+  const currentMarked = await pe(`!!document.querySelector('.tab-group__window--current')`);
+  assert(currentMarked, 'current window not marked');
+  await shot('manual-12.2-multiwindow.png');
+  return `grouped: ${labels.join(', ')}; current marked`;
+});
+
+await check('12.3', 'Save session prompts which window(s) to save', '🔴', async () => {
+  await clickSel('#tab-sessions');
+  await clickBtn('Save Tabs');
+  await waitFor(() => pe(`!!document.querySelector('.session-saver__dialog')`), { label: 'save dialog' });
+  const options = await pe(`document.querySelectorAll('.session-saver__window-option').length`);
+  assert(options === 2, `expected 2 window options, got ${options}`);
+  const defaults = await pe(
+    `[...document.querySelectorAll('.session-saver__window-checkbox')].filter(b => b.checked).length`,
+  );
+  assert(defaults === 1, `expected current window pre-selected, got ${defaults} selected`);
+  // Save only Window 2 (toggle current window off, second window on).
+  await pe(`(() => {
+    const boxes = [...document.querySelectorAll('.session-saver__window-checkbox')];
+    boxes[0].click(); boxes[1].click();
+    return true;
+  })()`);
+  await setInput('.session-saver__input', 'Manual MultiWin');
+  await clickBtnExact('Save');
+  await waitFor(
+    () => pe(`chrome.storage.local.get('adhd_sessions').then(r => (r.adhd_sessions||[])[0]?.name === 'Manual MultiWin')`),
+    { timeout: 8000, label: 'session saved' },
+  );
+  const tabCount = await pe(
+    `chrome.storage.local.get('adhd_sessions').then(r => (r.adhd_sessions||[])[0].tabs.length)`,
+  );
+  assert(tabCount === 1, `session should contain only Window 2's tab, got ${tabCount}`);
+  return `prompt shown, saved Window 2 only (${tabCount} tab)`;
+});
+
+await check('12.4', 'Close-window action closes only the target window', '🔴', async () => {
+  await clickSel('#tab-tabs');
+  const btnFound = await pe(`(() => {
+    const b = [...document.querySelectorAll('.tab-group__window-close')].find(b => (b.getAttribute('aria-label')||'').includes('Window 2'));
+    if (!b) return false; b.click(); return true;
+  })()`);
+  assert(btnFound, 'close-window button not found for Window 2');
+  await waitFor(() => pe(`!!document.querySelector('.modal-overlay')`), { label: 'modal' });
+  const modalText = await pe(`document.querySelector('.confirm-dialog__message')?.textContent`);
+  assert((modalText || '').includes('Window 2'), `modal text: ${modalText}`);
+  await clickBtnExact('Close 1');
+  await waitFor(() => pe(`chrome.windows.getAll().then(ws => ws.length === 1)`), {
+    timeout: 8000,
+    label: 'window 2 closed',
+  });
+  const sections = await pe(`document.querySelectorAll('.tab-group__window').length`);
+  assert(sections === 0, `expected single-window (unwrapped) list, got ${sections} sections`);
+  return 'window 2 closed, window 1 intact';
 });
 
 /* ============================================================

@@ -18,15 +18,28 @@ A Chrome Extension designed specifically for ADHD brains — minimal clutter, on
 
 ### 💾 Session Saver
 - Save current tabs as named sessions
+- **With multiple windows open, the save dialog asks which window(s) to snapshot** (e.g. “Window 2 only” or “Window 1 + 3”) — it never silently merges every window into one session
 - Restore sessions with one click
 - Auto-saves every 5 minutes
-- Undo-close for accidentally closed tabs
+- Undo-close for accidentally closed tabs (restores into the original window)
 
 ### 🛡️ Distraction Blocker
 - Pre-loaded with common distracting sites
 - Add/remove sites easily
 - Calm redirect page when blocked site is accessed
 - "Distractions avoided" counter for dopamine hits
+
+### 🪟 Multi-Window & Live Data
+- **Live data**: every surface (popup, side panel) updates itself the moment tabs or windows change — create/close a tab, open a new window, or change state in the other surface and the UI is instantly current (no refresh, no reopen)
+- **Tabs are grouped by window** in the Tabs view (“Window 1 / Window 2”, focused window marked)
+- **Close Window** closes a single window's non-pinned tabs; **Close All** is window-aware with a per-window breakdown in the confirm dialog
+- Undo-close restores tabs into their original window
+
+### 📌 Side Panel (Chrome)
+- One click from the header (right of the light/dark toggle) opens the whole app in Chrome's side panel
+- Same features as the popup, in a persistent, resizable surface
+- The header icon reflects whether the panel is open; theme and state stay in sync across surfaces
+- Automatically hidden in Firefox (no side panel API there)
 
 ### 📊 Daily Motivation
 - Rotating calming quotes
@@ -61,7 +74,7 @@ pnpm install
 # Build both targets (Chrome dist/ + Firefox dist-firefox/)
 pnpm build:all
 
-# Run unit/integration tests (248)
+# Run unit/integration tests (267)
 pnpm test
 
 # Lint
@@ -77,10 +90,10 @@ pnpm format
 ### Real-browser verification
 
 ```bash
-# Automated Chrome e2e (32 checks, headless, temp profile)
+# Automated Chrome e2e (49 checks, headless, temp profile)
 node scripts/e2e/chrome-e2e.mjs
 
-# Full manual-test matrix (74 checks, real clicks/tabs/storage/SW)
+# Full manual-test matrix (77 checks, real clicks/tabs/windows/storage/SW)
 node scripts/e2e/manual-test.mjs
 
 # + the ~60s service-worker tick test (timer completes with popup closed)
@@ -121,6 +134,7 @@ src/
 │   ├── types/      # TypeScript type definitions
 │   ├── utils/      # Helper functions and constants
 │   └── styles/     # CSS stylesheets
+├── sidepanel/      # Chrome side panel entry (reuses the popup app)
 ├── background/     # Service worker (background scripts)
 └── shared/         # Constants shared between popup and background
 ```

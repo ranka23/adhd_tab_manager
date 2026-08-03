@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { clearStorage } from './setup';
-import type { TabInfo } from '../src/popup/types';
+import type { TabInfo, WindowInfo } from '../src/popup/types';
 
 /* Factory for a complete chrome.tabs.Tab test object (all required fields) */
 function makeChromeTab(overrides: Partial<chrome.tabs.Tab> = {}): chrome.tabs.Tab {
@@ -44,6 +44,41 @@ function makeTabInfo(id: number, url: string, title: string, index = 0): TabInfo
 describe('Helpers', () => {
   beforeEach(async () => {
     await clearStorage();
+  });
+
+  describe('groupTabsByWindow', () => {
+    it('groups tabs by window and sorts each group by index', async () => {
+      const { groupTabsByWindow } = await import('../src/popup/utils/helpers');
+      const tabs = [
+        makeTabInfo(1, 'https://a.com', 'A', 1),
+        makeTabInfo(2, 'https://b.com', 'B', 0),
+        { ...makeTabInfo(3, 'https://c.com', 'C', 2), windowId: 2 },
+      ];
+      const grouped = groupTabsByWindow(tabs);
+      expect([...grouped.keys()].sort()).toEqual([1, 2]);
+      // Window 1 group sorted by index: B (0), A (1)
+      const win1 = grouped.get(1) ?? [];
+      expect(win1.map((t) => t.title)).toEqual(['B', 'A']);
+      // Window 2 group: C
+      expect((grouped.get(2) ?? []).map((t) => t.title)).toEqual(['C']);
+    });
+  });
+
+  describe('getWindowLabel', () => {
+    it('numbers windows by ascending id', async () => {
+      const { getWindowLabel } = await import('../src/popup/utils/helpers');
+      const windows: WindowInfo[] = [
+        { id: 5, focused: false, type: 'normal' },
+        { id: 2, focused: true, type: 'normal' },
+      ];
+      expect(getWindowLabel(2, windows)).toBe('Window 1');
+      expect(getWindowLabel(5, windows)).toBe('Window 2');
+    });
+
+    it('falls back to the raw window id when metadata is missing', async () => {
+      const { getWindowLabel } = await import('../src/popup/utils/helpers');
+      expect(getWindowLabel(9, [])).toBe('Window 9');
+    });
   });
 
   describe('generateId', () => {

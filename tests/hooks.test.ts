@@ -151,6 +151,30 @@ describe('useBlockedSites', () => {
     });
     expect(result.current.error).toBe('Failed to add blocked site');
   });
+
+  it('should live-refresh when blocked sites change in storage (side panel sync)', async () => {
+    const { useBlockedSites } = await import('../src/popup/hooks/useBlockedSites');
+    const { result } = renderHook(() => useBlockedSites());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await seedStorage({
+        [STORAGE_KEYS.BLOCKED_SITES]: [{ domain: 'live-sync.com', addedAt: Date.now() }],
+      });
+      mocks.storageOnChanged.emit(
+        {
+          [STORAGE_KEYS.BLOCKED_SITES]: {
+            newValue: [{ domain: 'live-sync.com', addedAt: Date.now() }],
+          },
+        },
+        'local',
+      );
+    });
+
+    await waitFor(() =>
+      expect(result.current.sites.map((s) => s.domain)).toContain('live-sync.com'),
+    );
+  });
 });
 
 /* ─══════════════════════════════════════════════════════════════════─
@@ -212,7 +236,7 @@ describe('useSessions', () => {
     // Act
     let sessionId = '';
     await act(async () => {
-      const session = await result.current.save('Test Session', '📁');
+      const session = await result.current.save('Test Session', '📁', [1]);
       sessionId = session.id;
     });
 
@@ -275,7 +299,7 @@ describe('useSessions', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await act(async () => {
-      await result.current.save('Delete Me', '🗑️');
+      await result.current.save('Delete Me', '🗑️', [1]);
     });
     expect(result.current.sessions).toHaveLength(1);
 
@@ -296,7 +320,7 @@ describe('useSessions', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await act(async () => {
-      await result.current.save('Old Name', '📁');
+      await result.current.save('Old Name', '📁', [1]);
     });
 
     // Act
@@ -310,9 +334,9 @@ describe('useSessions', () => {
   });
 
   it('should handle errors from save gracefully', async () => {
-    // Arrange — make tabService.getCurrentWindowTabs throw
+    // Arrange — make tabService.getWindowTabs throw
     const tabService = await import('../src/popup/services/tabService');
-    vi.spyOn(tabService, 'getCurrentWindowTabs').mockRejectedValueOnce(
+    vi.spyOn(tabService, 'getWindowTabs').mockRejectedValueOnce(
       new Error('Tabs error'),
     );
 
@@ -323,7 +347,7 @@ describe('useSessions', () => {
 
     // Act & Assert
     await act(async () => {
-      await expect(result.current.save('Fail', '❌')).rejects.toThrow('Tabs error');
+      await expect(result.current.save('Fail', '❌', [1])).rejects.toThrow('Tabs error');
     });
     expect(result.current.error).toBe('Failed to save session');
   });
@@ -353,6 +377,32 @@ describe('useSessions', () => {
     // Assert — the pre-seeded session should be loaded
     expect(result.current.sessions).toHaveLength(1);
     expect(result.current.sessions[0]?.name).toBe('Preloaded');
+  });
+
+  it('should live-refresh sessions when storage changes (side panel sync)', async () => {
+    const { useSessions } = await import('../src/popup/hooks/useSessions');
+    const { result } = renderHook(() => useSessions());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.sessions).toHaveLength(0);
+
+    // A save happens in the side panel → storage.onChanged fires here.
+    const liveSession = {
+      id: 'live-1',
+      name: 'Live Session',
+      createdAt: 1,
+      updatedAt: 1,
+      tabs: [],
+      icon: '📋',
+    };
+    await act(async () => {
+      await seedStorage({ [STORAGE_KEYS.SESSIONS]: [liveSession] });
+      mocks.storageOnChanged.emit(
+        { [STORAGE_KEYS.SESSIONS]: { newValue: [liveSession] } },
+        'local',
+      );
+    });
+    await waitFor(() => expect(result.current.sessions).toHaveLength(1));
+    expect(result.current.sessions[0]?.name).toBe('Live Session');
   });
 });
 
@@ -632,6 +682,78 @@ describe('useTabs', () => {
     expect(result.current.tabs).toEqual([]);
     expect(result.current.error).toBeNull();
   });
+
+  /* ── LIVE DATA — tab/window events auto-refresh the list ── */
+
+  it('should live-refresh tabs when a tab is created outside the popup', async () => {
+    const { useTabs } = await import('../src/popup/hooks/useTabs');
+    const { result } = renderHook(() => useTabs());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.tabs).toHaveLength(0);
+
+    // A new tab appears in the browser — tabs.onCreated fires.
+    mocks.tabs.query.mockResolvedValue([
+      {
+        id: 77,
+        url: 'https://live.example.com',
+        title: 'Live Tab',
+        favIconUrl: undefined,
+        active: false,
+        pinned: false,
+        windowId: 1,
+        index: 0,
+      },
+    ]);
+    await act(async () => {
+      mocks.tabs.onCreated.emit({ id: 77 });
+    });
+
+    await waitFor(() => expect(result.current.tabs).toHaveLength(1));
+    expect(result.current.tabs[0]?.url).toBe('https://live.example.com');
+  });
+
+  it('should live-refresh tabs when a tab is removed outside the popup', async () => {
+    mocks.tabs.query.mockResolvedValue([
+      {
+        id: 5,
+        url: 'https://keep.example.com',
+        title: 'Keep',
+        favIconUrl: undefined,
+        active: false,
+        pinned: false,
+        windowId: 1,
+        index: 0,
+      },
+    ]);
+    const { useTabs } = await import('../src/popup/hooks/useTabs');
+    const { result } = renderHook(() => useTabs());
+    await waitFor(() => expect(result.current.tabs).toHaveLength(1));
+
+    mocks.tabs.query.mockResolvedValue([]);
+    await act(async () => {
+      mocks.tabs.onRemoved.emit(5, { isWindowClosing: false });
+    });
+    await waitFor(() => expect(result.current.tabs).toHaveLength(0));
+  });
+
+  it('should track window metadata and update it when windows change', async () => {
+    mocks.windows.getAll.mockResolvedValue([
+      { id: 1, focused: true, type: 'normal' },
+      { id: 2, focused: false, type: 'normal' },
+    ]);
+    const { useTabs } = await import('../src/popup/hooks/useTabs');
+    const { result } = renderHook(() => useTabs());
+    await waitFor(() => expect(result.current.windows.length).toBe(2));
+    expect(result.current.windows[0]?.id).toBe(1);
+    expect(result.current.windows[1]?.id).toBe(2);
+
+    // Window 2 closes — windows.onRemoved fires.
+    mocks.windows.getAll.mockResolvedValue([{ id: 1, focused: true, type: 'normal' }]);
+    await act(async () => {
+      mocks.windows.onRemoved.emit(2);
+    });
+    await waitFor(() => expect(result.current.windows).toHaveLength(1));
+  });
 });
 
 /* ─══════════════════════════════════════════════════════════════════─
@@ -865,5 +987,31 @@ describe('useTimer', () => {
     expect(result.current.state.remainingSeconds).toBe(1200);
     expect(result.current.state.totalSeconds).toBe(1500);
     expect(result.current.state.completedInCycle).toBe(2);
+  });
+
+  it('should mirror timer state changes from storage (side panel sync)', async () => {
+    const { useTimer } = await import('../src/popup/hooks/useTimer');
+    const { result } = renderHook(() => useTimer());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.state.remainingSeconds).toBe(0);
+
+    // The other surface (popup/side panel) ticks the shared timer in storage.
+    const mirrored = {
+      phase: 'work',
+      isRunning: true,
+      remainingSeconds: 1499,
+      totalSeconds: 1500,
+      completedInCycle: 0,
+      startedAt: Date.now(),
+      pausedAt: null,
+    };
+    await act(async () => {
+      mocks.storageOnChanged.emit(
+        { [STORAGE_KEYS.ACTIVE_TIMER]: { newValue: mirrored } },
+        'local',
+      );
+    });
+    expect(result.current.state.remainingSeconds).toBe(1499);
+    expect(result.current.state.phase).toBe('work');
   });
 });

@@ -7,7 +7,7 @@
  * Each tab shows a focused set of features without overwhelming the user.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
 import { FocusMode } from './components/FocusMode';
 import { TabGroup } from './components/TabGroup';
@@ -27,12 +27,27 @@ import * as tabService from './services/tabService';
 import { EndOfDaySummary } from './components/EndOfDaySummary';
 import { validateBackupData } from './utils/validation';
 import { getAppliedTheme, saveTheme, type Theme } from './utils/theme';
-import type { FocusModeState, DailyStats, TabSession } from './types';
+import type { FocusModeState, DailyStats, TabSession, TabInfo, WindowInfo } from './types';
 import { POPUP_HEARTBEAT_INTERVAL_MS, STORAGE_KEYS } from '../shared/constants';
+import { isSidePanelSupported, toggleSidePanel } from '../shared/sidePanel';
+import { getWindowLabel } from './utils/helpers';
 import { browser } from '../shared/browser';
 
 /** Navigation tab identifiers */
 type NavTab = 'home' | 'tabs' | 'timer' | 'sessions' | 'block';
+
+/** Close-confirmation dialog state — covers both "close all windows" and
+ * "close this window" actions, with a per-window breakdown. */
+interface CloseConfirmState {
+  /** Whether this closes every window ('all') or a single window ('window') */
+  kind: 'all' | 'window';
+  /** Target window (for kind === 'window') */
+  windowId?: number;
+  /** Non-pinned tab IDs that will be closed */
+  tabIds: number[];
+  /** Per-window counts for the confirmation message */
+  breakdown: { windowId: number; label: string; count: number }[];
+}
 
 /**
  * The main popup component.
@@ -45,6 +60,12 @@ export const Popup: React.FC = () => {
     if (typeof document === 'undefined') return false;
     return getAppliedTheme() === 'dark';
   });
+
+  /* ---- Side panel state (Chromium only) ---- */
+  /** Whether the Chrome side panel is currently open — drives the header icon */
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  /** Whether the current browser exposes the side panel API (Chrome only) */
+  const [sidePanelSupported] = useState<boolean>(isSidePanelSupported);
 
   /* ---- Undo session deletion state ---- */
   const [undoSessionDelete, setUndoSessionDelete] = useState<{
@@ -86,11 +107,8 @@ export const Popup: React.FC = () => {
   /** Toast notification message */
   const [toast, setToast] = useState<string | null>(null);
 
-  /** Close-all confirmation dialog state */
-  const [closeAllConfirm, setCloseAllConfirm] = useState<{
-    tabCount: number;
-    tabIds: number[];
-  } | null>(null);
+  /** Close-all / close-window confirmation dialog state */
+  const [closeConfirm, setCloseConfirm] = useState<CloseConfirmState | null>(null);
 
   /** Ref to store the summary timeout ID for cleanup */
   const summaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -162,6 +180,50 @@ export const Popup: React.FC = () => {
     };
   }, []);
 
+  /**
+   * Side panel state — the panel page sets STORAGE_KEYS.SIDE_PANEL_OPEN on
+   * mount and clears it on unload; we mirror it so the header toggle icon
+   * reflects whether the panel is open.
+   */
+  useEffect(() => {
+    if (!sidePanelSupported) return;
+
+    void browser.storage.local.get(STORAGE_KEYS.SIDE_PANEL_OPEN).then((result) => {
+      setIsSidePanelOpen(result[STORAGE_KEYS.SIDE_PANEL_OPEN] === true);
+    });
+
+    const onStorageChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ): void => {
+      const change = changes[STORAGE_KEYS.SIDE_PANEL_OPEN];
+      if (area === 'local' && change) {
+        setIsSidePanelOpen(change.newValue === true);
+      }
+    };
+    browser.storage.onChanged.addListener(onStorageChanged);
+    return (): void => {
+      browser.storage.onChanged.removeListener(onStorageChanged);
+    };
+  }, [sidePanelSupported]);
+
+  /**
+   * Opens (or closes, when the runtime supports it) the extension in the
+   * Chrome side panel. No-op on browsers without the side panel API.
+   */
+  const handleToggleSidePanel = useCallback(async () => {
+    if (!sidePanelSupported) return;
+    try {
+      const win = await browser.windows.getCurrent();
+      const ok = await toggleSidePanel(win.id ?? chrome.windows.WINDOW_ID_CURRENT, isSidePanelOpen);
+      if (!ok) {
+        showToast('Side panel is only available in Chrome');
+      }
+    } catch (err) {
+      console.warn('Failed to toggle the side panel:', err);
+    }
+  }, [sidePanelSupported, isSidePanelOpen, showToast]);
+
   /** Handles starting focus mode */
   const handleStartFocus = useCallback(async () => {
     if (isTogglingFocus.current) return;
@@ -229,39 +291,99 @@ export const Popup: React.FC = () => {
     }
   }, [focusMode.startedAt, blockedSites]);
 
-  /** Handles closing all non-pinned tabs with confirmation */
-  const handleCloseAll = useCallback(async () => {
+  /** Number of open tabs per window — drives the save-session window prompt */
+  const windowTabCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const tab of tabs.tabs) {
+      counts[tab.windowId] = (counts[tab.windowId] ?? 0) + 1;
+    }
+    return counts;
+  }, [tabs.tabs]);
+
+  /**
+   * Builds the per-window breakdown of a list of tabs, for the
+   * close confirmation dialog and quick-action info.
+   */
+  const buildBreakdown = useCallback(
+    (list: TabInfo[], windows: WindowInfo[]): CloseConfirmState['breakdown'] => {
+      const byWindow = new Map<number, number>();
+      for (const tab of list) {
+        byWindow.set(tab.windowId, (byWindow.get(tab.windowId) ?? 0) + 1);
+      }
+      return [...byWindow.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([windowId, count]) => ({
+          windowId,
+          count,
+          label: getWindowLabel(windowId, windows),
+        }));
+    },
+    [],
+  );
+
+  /** Handles closing all non-pinned tabs across every window (with confirmation) */
+  const handleCloseAll = useCallback(() => {
     const nonPinned = tabs.tabs.filter((t) => !t.pinned);
     if (nonPinned.length === 0) {
       showToast('No non-pinned tabs to close');
       return;
     }
-
-    // Show confirmation dialog
-    setCloseAllConfirm({
-      tabCount: nonPinned.length,
+    setCloseConfirm({
+      kind: 'all',
       tabIds: nonPinned.map((t) => t.id),
+      breakdown: buildBreakdown(nonPinned, tabs.windows),
     });
-  }, [tabs, showToast]);
+  }, [tabs, showToast, buildBreakdown]);
 
-  /** Executes the close-all after confirmation */
-  const executeCloseAll = useCallback(async () => {
-    if (!closeAllConfirm) return;
-    const { tabIds } = closeAllConfirm;
-    setCloseAllConfirm(null);
+  /** Handles closing all non-pinned tabs in a single window (with confirmation) */
+  const handleCloseWindow = useCallback(
+    (windowId: number) => {
+      const nonPinned = tabs.tabs.filter((t) => !t.pinned && t.windowId === windowId);
+      if (nonPinned.length === 0) {
+        showToast('No non-pinned tabs to close in this window');
+        return;
+      }
+      setCloseConfirm({
+        kind: 'window',
+        windowId,
+        tabIds: nonPinned.map((t) => t.id),
+        breakdown: buildBreakdown(nonPinned, tabs.windows),
+      });
+    },
+    [tabs, showToast, buildBreakdown],
+  );
 
-    for (const tabId of tabIds) {
-      await tabs.closeTab(tabId);
+  /** Closes non-pinned tabs in the window the popup is attached to */
+  const handleCloseCurrentWindow = useCallback(() => {
+    const windowId = tabs.currentWindowId ?? tabs.windows[0]?.id;
+    if (windowId == null) {
+      showToast('No window to close');
+      return;
     }
+    handleCloseWindow(windowId);
+  }, [tabs.currentWindowId, tabs.windows, handleCloseWindow, showToast]);
 
-    showToast(`Closed ${tabIds.length} tab${tabIds.length !== 1 ? 's' : ''}`);
-  }, [closeAllConfirm, tabs, showToast]);
+  /** Executes the close action after confirmation */
+  const executeClose = useCallback(async () => {
+    if (!closeConfirm) return;
+    const { tabIds, kind, windowId } = closeConfirm;
+    setCloseConfirm(null);
 
-  /* ---- Close-all confirmation dialog: focus + Escape handling ---- */
+    await tabService.closeTabs(tabIds);
+    await tabs.refreshTabs();
+
+    const detail =
+      kind === 'window' && windowId != null
+        ? ` in ${getWindowLabel(windowId, tabs.windows)}`
+        : '';
+    showToast(`Closed ${tabIds.length} tab${tabIds.length !== 1 ? 's' : ''}${detail}`);
+  }, [closeConfirm, tabs, showToast]);
+
+  /* ---- Close confirmation dialog: focus + Escape handling ---- */
   const confirmDialogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!closeAllConfirm) return;
+    if (!closeConfirm) return;
 
     // Remember what was focused so we can restore it on close
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -274,7 +396,7 @@ export const Popup: React.FC = () => {
 
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
-        setCloseAllConfirm(null);
+        setCloseConfirm(null);
         return;
       }
 
@@ -306,11 +428,42 @@ export const Popup: React.FC = () => {
       document.removeEventListener('keydown', handleKeyDown);
       previouslyFocused?.focus();
     };
-  }, [closeAllConfirm]);
+  }, [closeConfirm]);
 
   // Load daily stats on mount
   useEffect(() => {
     void sessionService.getDailyStats().then(setDailyStats);
+  }, []);
+
+  /* LIVE DATA — keep focus mode + daily stats in sync across the popup and
+   * the side panel (which may be open simultaneously) and with the background
+   * worker (blocker counters). No manual refresh needed. */
+  useEffect(() => {
+    const STAT_KEYS = [
+      STORAGE_KEYS.DISTRACTIONS_BLOCKED,
+      STORAGE_KEYS.FOCUS_MINUTES_TODAY,
+      STORAGE_KEYS.TODAY_POMODOROS,
+      STORAGE_KEYS.SESSIONS_SAVED_TODAY,
+      STORAGE_KEYS.POMODORO_STREAK,
+      STORAGE_KEYS.LAST_POMODORO_DATE,
+    ];
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ): void => {
+      if (area !== 'local') return;
+      const focusChange = changes[STORAGE_KEYS.FOCUS_MODE];
+      if (focusChange && focusChange.newValue) {
+        setFocusMode(focusChange.newValue as FocusModeState);
+      }
+      if (STAT_KEYS.some((key) => changes[key])) {
+        void sessionService.getDailyStats().then(setDailyStats);
+      }
+    };
+    browser.storage.onChanged.addListener(onChanged);
+    return (): void => {
+      browser.storage.onChanged.removeListener(onChanged);
+    };
   }, []);
 
   // If focus mode is active and we're not on the home tab, switch to home
@@ -320,10 +473,10 @@ export const Popup: React.FC = () => {
     }
   }, [focusMode.isActive, activeTab]);
 
-  /** Handles session save with success toast */
+  /** Handles session save with success toast (multi-window aware) */
   const handleSessionSave = useCallback(
-    async (name: string, icon: string) => {
-      const session = await sessions.save(name, icon);
+    async (name: string, icon: string, windowIds: number[]) => {
+      const session = await sessions.save(name, icon, windowIds);
       showToast('Session saved! 💾');
       return session;
     },
@@ -468,6 +621,8 @@ export const Popup: React.FC = () => {
         onToggleDarkMode={handleToggleDarkMode}
         onExport={handleExport}
         onImport={handleImport}
+        isSidePanelOpen={isSidePanelOpen}
+        {...(sidePanelSupported ? { onToggleSidePanel: handleToggleSidePanel } : {})}
       />
 
       {/* Loading skeletons (shown when data is loading) */}
@@ -526,11 +681,11 @@ export const Popup: React.FC = () => {
         </div>
       )}
 
-      {/* Close-all confirmation dialog */}
-      {closeAllConfirm && (
+      {/* Close confirmation dialog (close-all or close-window) */}
+      {closeConfirm && (
         <div
           className="modal-overlay"
-          onClick={() => setCloseAllConfirm(null)}
+          onClick={() => setCloseConfirm(null)}
           role="dialog"
           aria-modal="true"
           aria-label="Confirm close tabs"
@@ -543,8 +698,22 @@ export const Popup: React.FC = () => {
           >
             <div className="confirm-dialog__body">
               <p className="confirm-dialog__message">
-                Close {closeAllConfirm.tabCount} tab{closeAllConfirm.tabCount !== 1 ? 's' : ''}?
+                Close {closeConfirm.tabIds.length} tab
+                {closeConfirm.tabIds.length !== 1 ? 's' : ''}
+                {closeConfirm.kind === 'window' && closeConfirm.windowId != null
+                  ? ` in ${getWindowLabel(closeConfirm.windowId, tabs.windows)}`
+                  : ''}
+                ?
               </p>
+              {closeConfirm.kind === 'all' && closeConfirm.breakdown.length > 1 && (
+                <ul className="confirm-dialog__breakdown">
+                  {closeConfirm.breakdown.map((b) => (
+                    <li key={b.windowId}>
+                      {b.label}: {b.count} tab{b.count !== 1 ? 's' : ''}
+                    </li>
+                  ))}
+                </ul>
+              )}
               <p className="confirm-dialog__hint">
                 You can undo this action after closing.
               </p>
@@ -552,16 +721,16 @@ export const Popup: React.FC = () => {
             <div className="confirm-dialog__actions">
               <button
                 className="btn btn-text"
-                onClick={() => setCloseAllConfirm(null)}
+                onClick={() => setCloseConfirm(null)}
               >
                 Cancel
               </button>
               <button
                 className="btn btn-primary"
                 style={{ backgroundColor: 'var(--error-color, #d32f2f)' }}
-                onClick={executeCloseAll}
+                onClick={executeClose}
               >
-                Close {closeAllConfirm.tabCount}
+                Close {closeConfirm.tabIds.length}
               </button>
             </div>
           </div>
@@ -663,7 +832,9 @@ export const Popup: React.FC = () => {
                     <QuickActions
                       tabCount={tabs.tabs.length}
                       pinnedCount={tabs.tabs.filter((t) => t.pinned).length}
+                      windowCount={tabs.windows.length}
                       onUndoClose={tabs.undoCloseTab}
+                      onCloseWindow={handleCloseCurrentWindow}
                       onCloseAll={handleCloseAll}
                       isFocusMode={focusMode.isActive}
                     />
@@ -680,7 +851,13 @@ export const Popup: React.FC = () => {
                       <p className="tab-group__empty-hint">No ungrouped tabs to show.</p>
                     </div>
                   ) : (
-                    <TabGroup tabs={tabs.tabs} onCloseTab={tabs.closeTab} />
+                    <TabGroup
+                      tabs={tabs.tabs}
+                      windows={tabs.windows}
+                      currentWindowId={tabs.currentWindowId}
+                      onCloseTab={tabs.closeTab}
+                      onCloseWindow={handleCloseWindow}
+                    />
                   )}
                 </div>
               )}
@@ -710,6 +887,9 @@ export const Popup: React.FC = () => {
                     <SessionSaver
                       sessions={sessions.sessions}
                       openTabCount={tabs.tabs.length}
+                      windows={tabs.windows}
+                      currentWindowId={tabs.currentWindowId}
+                      windowTabCounts={windowTabCounts}
                       onSave={handleSessionSave}
                       onRestore={handleSessionRestore}
                       onDelete={handleSessionDelete}

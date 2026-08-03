@@ -1,10 +1,10 @@
 # ADHD Tab Manager — Manual Test Results
 
-**Date:** 2026-08-01 · **Driver:** `node scripts/e2e/manual-test.mjs` (and `MANUAL_TEST_SLOW=1` for the SW-tick check)
+**Date:** 2026-08-03 · **Driver:** `node scripts/e2e/manual-test.mjs` (and `MANUAL_TEST_SLOW=1` for the SW-tick check)
 **Environment:** Self-contained Chrome for Testing (headless=new, fresh temp profile) with `dist/` loaded; real tabs, real storage, real service worker.
-**Result:** **74/74 PASS · 0 FAIL** (21 🔴 must-pass items all green). Screenshots in `artifacts/manual/`, raw data in `artifacts/manual/results.json`.
+**Result:** **77 PASS · 0 FAIL · 1 SKIP** (78 defined; the skip is the intentional ~60 s SW-tick check — run with `MANUAL_TEST_SLOW=1`). 21 🔴 must-pass items all green. Screenshots in `artifacts/manual/`, raw data in `artifacts/manual/results.json`.
 
-> The automated harness (`chrome-e2e.mjs`, 32 checks) covers the fast smoke paths; this run exercised the human-plan matrix (§1–§11) against the live extension — clicking real buttons, typing into real inputs, creating/observing real tabs, reading real storage, and driving the real service worker.
+> The automated harness (`chrome-e2e.mjs`, 49 checks) covers the fast smoke paths, the Chrome side panel, and the multi-window/live-data matrix; this run exercised the human-plan matrix (§1–§12) against the live extension — clicking real buttons, typing into real inputs, creating/observing real tabs and windows, reading real storage, and driving the real service worker. Checks 7.2 and 9.5 were hardened to use `waitFor` instead of fixed sleep, eliminating the pre-existing `chrome.tabs.create` URL-commit race.
 
 ---
 
@@ -23,8 +23,9 @@
 | 9. Quick actions | 9.1–9.5 | ✅ all pass |
 | 10. Export / Import | 10.1–10.7 | ✅ all pass (real UI import incl. hostile-file rejection) |
 | 11. Responsive & mobile | 11.1–11.3 | ✅ all pass |
+| 12. Multi-window & live data | 12.1–12.4 | ✅ all pass |
 
-Type mix exercised: 34 🟢 happy path · 14 ⚠️ edge case · 21 🔴 must-pass · 5 📱 responsive.
+Type mix exercised: 36 🟢 happy path · 14 ⚠️ edge case · 23 🔴 must-pass · 5 📱 responsive.
 
 ---
 
@@ -153,6 +154,17 @@ Type mix exercised: 34 🟢 happy path · 14 ⚠️ edge case · 21 🔴 must-pa
 | 11.1 | ✅ | No horizontal overflow at 360 / 480 / 800 px (content-element check, scrollbar-tolerant) |
 | 11.2 | ✅ | `prefers-reduced-motion: reduce` collapses animations to 0.01 ms |
 | 11.3 | ✅ | Primary actions (focus start, quick actions) ≥ 40 px tall |
+
+---
+
+## Section 12 — Multi-window & live data
+
+| # | Result | Notes |
+|---|---|---|
+| 12.1 | ✅ | Creating a tab outside the popup updates the count + card **without reload** (1 → 2 → 1) — `tabs.onCreated/onRemoved` listeners |
+| 12.2 | ✅ | Second window → Tabs view splits into “Window 1” / “Window 2” sections; current window marked with a dot |
+| 12.3 | ✅ | Save dialog prompts “Save tabs from which windows?” with 2 checkboxes; current window pre-selected; saving Window 2 only produced a 1-tab session |
+| 12.4 | ✅ | Close-window action (modal names the target window) closed only Window 2; UI collapsed back to a single (unwrapped) list |
 
 ---
 

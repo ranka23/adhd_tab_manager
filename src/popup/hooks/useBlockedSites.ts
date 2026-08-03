@@ -6,6 +6,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { BlockedSite } from '../types';
 import * as blockService from '../services/blockService';
+import { STORAGE_KEYS } from '../../shared/constants';
+import { browser } from '../../shared/browser';
 
 /** Return type for the useBlockedSites hook */
 interface UseBlockedSitesReturn {
@@ -43,7 +45,7 @@ export function useBlockedSites(): UseBlockedSitesReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /** Fetches the blocked sites and active state */
+  /** Refreshes blocked sites + active state from storage (public + internal) */
   const refresh = useCallback(async () => {
     try {
       const [blockedSites, active] = await Promise.all([
@@ -58,6 +60,26 @@ export function useBlockedSites(): UseBlockedSitesReturn {
       setIsLoading(false);
     }
   }, []);
+
+  /* LIVE DATA — mirror storage writes from any context (side panel, background
+   * focus start/end, storage import) so the block list never goes stale. */
+  useEffect(() => {
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ): void => {
+      if (
+        area === 'local' &&
+        (changes[STORAGE_KEYS.BLOCKED_SITES] || changes[STORAGE_KEYS.BLOCKED_SITES_ACTIVE])
+      ) {
+        void refresh();
+      }
+    };
+    browser.storage.onChanged.addListener(onChanged);
+    return (): void => {
+      browser.storage.onChanged.removeListener(onChanged);
+    };
+  }, [refresh]);
 
   /** Adds a domain to the blocked list */
   const addSite = useCallback(

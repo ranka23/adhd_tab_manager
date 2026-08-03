@@ -17,9 +17,13 @@ interface QuickActionsProps {
   tabCount: number;
   /** Number of pinned tabs (won't be closed by "close all") */
   pinnedCount: number;
+  /** Number of open browser windows */
+  windowCount: number;
   /** Callback to undo-close the last closed tab */
   onUndoClose: () => Promise<boolean>;
-  /** Callback to close all non-pinned tabs */
+  /** Callback to close all non-pinned tabs in the current window */
+  onCloseWindow: () => void;
+  /** Callback to close all non-pinned tabs in every window */
   onCloseAll: () => void;
   /** Whether focus mode is active (affects available actions) */
   isFocusMode: boolean;
@@ -32,11 +36,15 @@ interface QuickActionsProps {
 export const QuickActions: React.FC<QuickActionsProps> = ({
   tabCount,
   pinnedCount,
+  windowCount,
   onUndoClose,
+  onCloseWindow,
   onCloseAll,
 }) => {
   /** Whether to show the "close all" confirmation */
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  /** Whether to show the "close window" confirmation */
+  const [showCloseWindowConfirm, setShowCloseWindowConfirm] = useState(false);
   /** Success message shown briefly after an action */
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -64,6 +72,18 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     setTimeout(() => setSuccessMessage(null), 2000);
   };
 
+  /** Handles close-window with confirmation */
+  const handleCloseWindow = (): void => {
+    if (!showCloseWindowConfirm) {
+      setShowCloseWindowConfirm(true);
+      return;
+    }
+    onCloseWindow();
+    setShowCloseWindowConfirm(false);
+    setSuccessMessage('Window tabs closed (pinned kept)');
+    setTimeout(() => setSuccessMessage(null), 2000);
+  };
+
   return (
     <div className="quick-actions">
       <h3 className="quick-actions__title">Quick Actions</h3>
@@ -82,7 +102,29 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           <span className="quick-action-btn__label">Undo Close</span>
         </button>
 
-        {/* Close All Non-Pinned Tabs */}
+        {/* Close Non-Pinned Tabs in the Current Window */}
+        <button
+          className={`quick-action-btn ${showCloseWindowConfirm ? 'quick-action-btn--danger' : ''}`}
+          onClick={handleCloseWindow}
+          onBlur={() => setShowCloseWindowConfirm(false)}
+          aria-label={
+            showCloseWindowConfirm
+              ? 'Confirm close non-pinned tabs in this window'
+              : 'Close non-pinned tabs in this window'
+          }
+        >
+          <span className="quick-action-btn__icon">{showCloseWindowConfirm ? '⚠️' : '🪟'}</span>
+          <span className="quick-action-btn__label">
+            {showCloseWindowConfirm ? 'Confirm?' : 'Close Window'}
+          </span>
+          {!showCloseWindowConfirm && tabCount > 0 && (
+            <span className="quick-action-btn__badge">
+              {tabCount - pinnedCount > 0 ? tabCount - pinnedCount : 0}
+            </span>
+          )}
+        </button>
+
+        {/* Close All Non-Pinned Tabs (every window) */}
         <button
           className={`quick-action-btn ${showCloseConfirm ? 'quick-action-btn--danger' : ''}`}
           onClick={handleCloseAll}
@@ -108,6 +150,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           </span>
           {pinnedCount > 0 && (
             <span className="quick-action-btn__subtext">{pinnedCount} pinned</span>
+          )}
+          {windowCount > 1 && (
+            <span className="quick-action-btn__subtext">{windowCount} windows</span>
           )}
         </div>
       </div>

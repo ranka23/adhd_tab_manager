@@ -730,6 +730,20 @@ body::-webkit-scrollbar-thumb:hover {
   margin: 0;
 }
 
+.confirm-dialog__breakdown {
+  margin: 10px 0 0 0;
+  padding: 8px 12px;
+  list-style: none;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .confirm-dialog__actions {
   display: flex;
   justify-content: flex-end;
@@ -834,10 +848,6 @@ body {
 
   .header-actions {
     gap: 4px;
-  }
-
-  .header-text {
-    font-size: 15px;
   }
 
   .quick-actions {

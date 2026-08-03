@@ -1,10 +1,10 @@
 # ADHD Tab Manager — Manual Test Plan
 
-**Target builds:** `dist/` (Chromium MV3, service worker) and `dist-firefox/` (Firefox MV3, event page)
-**Automated baseline:** `node scripts/e2e/chrome-e2e.mjs` → 32/32 checks (see `adhd-prod-todo.md` §9).
+**Target builds:** `dist/` (Chromium MV3, service worker + side panel) and `dist-firefox/` (Firefox MV3, event page)
+**Automated baseline:** `node scripts/e2e/chrome-e2e.mjs` → 49/49 checks (see `adhd-prod-todo.md` §9).
 **This plan covers what a human must verify by hand** — the flows that need real tabs, real windows, real time, or a human eye.
 
-> **Status (2026-08-01):** **FULLY VERIFIED — see `docs/manual-test-results.md` (74/74 PASS via `scripts/e2e/manual-test.mjs`, self-contained CfT on :9334; +60 s SW-tick check with `MANUAL_TEST_SLOW=1`).** The persistent interactive env (`start-test-env.mjs` on :9222, MCP servers in `.zed/mcp.json`) remains for human/MCP-driven sessions. Sections 1–11 are machine-verified; Section 12 (Firefox) and the toolbar/notification/file-picker items still need a human.
+> **Status (2026-08-03):** **FULLY VERIFIED — see `docs/manual-test-results.md` (77/77 executed PASS, 1 slow-skip, via `scripts/e2e/manual-test.mjs`, self-contained CfT on :9334; +60 s SW-tick check with `MANUAL_TEST_SLOW=1`).** The persistent interactive env (`start-test-env.mjs` on :9222, MCP servers in `.zed/mcp.json`) remains for human/MCP-driven sessions. Sections 1–12 are machine-verified; Section 13 (Firefox) and the toolbar/notification/file-picker items still need a human.
 
 > Legend: 🟢 = happy path · ⚠️ = edge case · 🔴 = must-pass before release · 📱 = responsive/mobile check
 
@@ -126,7 +126,7 @@ Fixtures for import tests live in `scripts/e2e/test-fixtures/` (see §8).
 
 | # | Test | Steps | Expected | Type |
 |---|---|---|---|---|
-| 6.1 | Save | Open 2–3 tabs → "Save session" | Session appears in list with name + icon | 🟢 |
+| 6.1 | Save | Open 2–3 tabs → "Save session" (single window: saves that window; 2+ windows: prompts which window(s) — see §12.4) | Session appears in list with name + icon | 🟢 |
 | 6.2 | Suggestions | Focus the name field | Suggested names appear (e.g. "Work", "Study") | 🟢 |
 | 6.3 | Icon picker | Save with different icons | Icon persists on the card | 🟢 |
 | 6.4 | Empty disabled | No name entered | Save button disabled | ⚠️ |
@@ -221,35 +221,81 @@ Also verify: zoom 200% still usable; keyboard-only navigation works; `prefers-re
 
 ---
 
-## 12. Firefox parity 🔴
+## 12. Multi-window & live data 🔴
+
+**Live data:** the popup/side panel subscribe to the Chrome tab & window event streams (`tabs.onCreated/onRemoved/onUpdated/…`, `windows.onRemoved/onFocusChanged`) and to `storage.onChanged`, so every surface updates **automatically** — close a tab in the browser and the count drops, open a second window and the Tabs view splits into per-window sections, start a focus session in the side panel and the popup reflects it instantly. No manual refresh anywhere.
+
+**Multi-window:** tabs are grouped by the window they belong to; **Save session prompts which window(s) to snapshot** (never silently merges every window); Close All / Close Window / close-tab actions are window-aware; undo-close restores into the original window.
+
+| # | Test | Steps | Expected | Type |
+|---|---|---|---|---|
+| 12.1 | Live tab create | With popup open, open a new tab in the browser (Cmd+T → type URL) | Tabs view count + card appear without reopening the popup | 🔴 |
+| 12.2 | Live tab close | Close that tab from the tab strip | Count drops back; card disappears | 🔴 |
+| 12.3 | Live second window | Cmd+N to open a new window with a tab | Tabs view splits into “Window 1” / “Window 2” sections; current window marked with a dot | 🔴 |
+| 12.4 | Save prompt | Open 2 windows → Sessions → Save Tabs | Dialog asks “Save tabs from which windows?” with a checkbox per window; current window pre-selected | 🔴 |
+| 12.5 | Save one window only | Uncheck Window 1, keep Window 2, name + save | Saved session contains ONLY Window 2's tabs | 🔴 |
+| 12.6 | Save multiple windows | Check Window 1 + Window 2 together | One session containing both windows' tabs (explicit selection only) | ⚠️ |
+| 12.7 | Save disabled w/o selection | Uncheck all windows | Save button disabled | ⚠️ |
+| 12.8 | Close Window | Tabs view → “✕ Close” on a window section | Confirm modal names that window; only its non-pinned tabs close; other window untouched | 🔴 |
+| 12.9 | Close All breakdown | 2 windows open → Home → Close All (confirm) | Modal lists per-window counts; all non-pinned tabs across both windows close; undo restores them into their original windows | 🔴 |
+| 12.10 | Undo-close window fidelity | Close a tab in window 2, undo | Tab reopens in window 2, not the current window | ⚠️ |
+| 12.11 | Quick actions windows count | 2+ windows open, Home view | Info card shows “N windows” | 🟢 |
+| 12.12 | Popup ↔ side panel sync | With both open, close a tab / save a session in one | The other surface updates instantly (storage + tab listeners) | 🔴 |
+| 12.13 | Timer sync | Popup + side panel both open, start pomodoro | Timer decrements exactly 1/s total (popup owns the tick; panel mirrors — no double speed) | 🔴 |
+
+---
+
+## 13. Firefox parity 🔴
 
 Run the whole suite in Firefox (`about:debugging` → Load Temporary Add-on → `dist-firefox/manifest.json`).
 
 | # | Test | Expected |
 |---|---|---|
-| 12.1 | Extension loads with no errors in Browser Console | Clean load |
-| 12.2 | Popup renders (all 5 nav tabs) | Same as Chrome |
-| 12.3 | Theme persists + no flash | Same as Chrome |
-| 12.4 | Focus mode blocks sites | Redirect works |
-| 12.5 | Pomodoro completes with popup closed | Notification + alarm works (event page, not SW) |
-| 12.6 | Sessions save/restore/delete+undo | Same behavior as Chrome |
-| 12.7 | Import/export | Same as Chrome |
-| 12.8 | Responsive widths | No overflow |
+| 13.1 | Extension loads with no errors in Browser Console | Clean load |
+| 13.2 | Popup renders (all 5 nav tabs) | Same as Chrome |
+| 13.3 | Theme persists + no flash | Same as Chrome |
+| 13.4 | Focus mode blocks sites | Redirect works |
+| 13.5 | Pomodoro completes with popup closed | Notification + alarm works (event page, not SW) |
+| 13.6 | Sessions save/restore/delete+undo | Same behavior as Chrome |
+| 13.7 | Import/export | Same as Chrome |
+| 13.8 | Responsive widths | No overflow |
+| 13.9 | Side panel toggle hidden | No side-panel button in the header; manifest has no `side_panel`/`sidePanel` (Firefox has no side panel API) |
+| 13.10 | Multi-window grouping + save prompt | Same as Chrome (§12) |
 
 ---
 
-## 13. Release gate checklist
+## 14. Side panel (Chrome only) 🟢
+
+Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). Firefox/Safari have no side panel API — the toggle is hidden and `dist-firefox` strips the manifest key.
+
+| # | Test | Steps | Expected | Type |
+|---|---|---|---|---|
+| 14.1 | Toggle button placement | Open popup | Side-panel icon button sits directly after the light/dark icon, before the Focus button | 🟢 |
+| 14.2 | Open | Click the side-panel icon | Side panel opens on the right; the icon gets the active (filled) state | 🟢 |
+| 14.3 | 🔴 Icon reflects open state | With panel open, close popup and reopen | Icon still shows the active state | 🔴 |
+| 14.4 | Panel renders app | Side panel open | Header, quote, all 5 nav tabs render; same theme as popup (no flash) | 🟢 |
+| 14.5 | Persistence | Use the panel for a while, switch tabs, come back | Panel stays open and state persists | 🟢 |
+| 14.6 | Timer while panel open | Start pomodoro in panel, leave panel open, wait a minute | Countdown decreases by exactly 1/min (SW skips its tick — `runtime.getContexts` sees SIDE_PANEL) | 🔴 |
+| 14.7 | Focus mode from panel | Start focus in the panel | Blocker active; navigating to a blocked site redirects | 🟢 |
+| 14.8 | Session restore from panel | Save session in popup, restore in panel (and vice-versa) | Works both ways (shared storage) | 🟢 |
+| 14.9 | Resizable | Drag the panel wider/narrower | App fills the panel; no horizontal scrollbar; content centers at very wide widths (≥720px cap) | 📱 |
+| 14.10 | Narrow panel (320px) | Shrink panel to ~320px | No overflow; compact header still fits | 📱 |
+| 14.11 | Theme sync | Toggle theme in the panel, check popup (and vice-versa) | Both surfaces show the same theme instantly | 🟢 |
+
+---
+
+## 15. Release gate checklist
 
 Before tagging v1.0.0:
 
 - [x] `pnpm lint` → 0 problems
-- [x] `pnpm test` → all pass (248)
+- [x] `pnpm test` → all pass (267)
 - [x] `pnpm build:all` → clean
 - [x] `pnpm lint:firefox` → 0 errors
-- [x] `node scripts/e2e/chrome-e2e.mjs` → 32/32
-- [x] `node scripts/e2e/manual-test.mjs` → 74/74 (see `docs/manual-test-results.md`)
-- [x] Sections 1–11 machine-verified (all 🔴 items green)
-- [ ] Section 12 Firefox parity + toolbar/notification/file-picker — human pass required
+- [x] `node scripts/e2e/chrome-e2e.mjs` → 49/49
+- [x] `node scripts/e2e/manual-test.mjs` → 77/77 (see `docs/manual-test-results.md`)
+- [x] Sections 1–12 machine-verified (all 🔴 items green)
+- [ ] Section 13 Firefox parity + Section 14 side panel + toolbar/notification/file-picker — human pass required
 - [x] `git status` clean; version bumped; README updated
 - [ ] (Optional) Tag `v1.0.0`
 
@@ -265,6 +311,7 @@ Before tagging v1.0.0:
 | `adhd_active_timer` | Pomodoro state (phase, remainingSeconds, …) |
 | `adhd_closed_tabs` | Undo-close history (max 20) |
 | `adhd_theme` | `'light' \| 'dark'` |
+| `adhd_sidepanel_open` | `true` while the Chrome side panel page is mounted (popup header uses it for the toggle icon; cleared on unload) |
 | `adhd_popup_heartbeat` | ms timestamp; SW uses it to detect an open popup (Firefox) |
 | `adhd_timer_settings` | work/short/long minutes + pomodoros-before-long |
 | `adhd_distractions_blocked`, `adhd_focus_minutes_today`, `adhd_sessions_saved_today`, `adhd_pomodoro_streak` | Daily stats |

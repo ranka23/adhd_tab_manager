@@ -1,0 +1,24 @@
+/**
+ * sidepanel.css — Overrides for the Chrome side panel surface.
+ *
+ * The popup is a fixed 400×580 shell (see popup.css); the side panel is a
+ * persistent, user-resizable surface (typically 320–600px wide and full
+ * height), so the body must fill the panel instead. Everything else is
+ * inherited from the shared popup styles, keeping the two surfaces
+ * pixel-identical in look and feel.
+ */
+
+/* Fill the panel instead of the popup's fixed-size shell */
+body.sidepanel-body {
+  width: 100vw;
+  min-height: 100vh;
+  max-height: none;
+}
+
+/* When dragged very wide, keep the app column readable and centered */
+@media (min-width: 720px) {
+  body.sidepanel-body {
+    width: min(720px, 100vw);
+    margin-inline: auto;
+  }
+}

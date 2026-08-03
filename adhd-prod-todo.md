@@ -8,7 +8,7 @@
 
 ## ✅ Implementation Status (updated 2026-08-01)
 
-All tasks below have been **implemented and verified**: `pnpm build` ✅ (no warnings), `pnpm lint` ✅ (clean), `pnpm test` ✅ **248 tests / 15 files pass**, `pnpm lint:firefox` ✅ (0 errors), a **real-browser e2e run: 32/32 checks pass** (see §9), and a **full manual-test run: 74/74 checks pass** (see §15 and `docs/manual-test-results.md`). Firefox support (MV3 event page), the cross-browser `browser` shim, the popup-heartbeat fallback, and responsive layouts were added in the same pass — see §§8–13.
+All tasks below have been **implemented and verified**: `pnpm build` ✅ (no warnings), `pnpm lint` ✅ (clean), `pnpm test` ✅ **267 tests / 15 files pass**, `pnpm lint:firefox` ✅ (0 errors), a **real-browser e2e run: 49/49 checks pass** (see §9), and a **full manual-test run: 77/77 pass (1 slow-skip)** (see §15 and `docs/manual-test-results.md`). Firefox support (MV3 event page), the cross-browser `browser` shim, the popup-heartbeat fallback, responsive layouts, the Chrome **side panel**, **live dynamic data**, and **multi-window support** were added in the same passes — see §§8–16.
 
 **Editor lint note:** the typed-linting error on `vite.config.ts` ("TSConfig does not include this file") is fully resolved: `tsconfig.eslint.json` lists the root config files, `.eslintrc.cjs` now sets an **explicit absolute `tsconfigRootDir`** (so typed linting resolves identically regardless of the cwd ESLint is launched from — CLI vs editor language server), and non-TS files (`scripts/**/*.mjs`, `public/*.js`) opt out of typed linting via `parserOptions: { project: null }` overrides. `pnpm lint` now covers the **whole project** (`eslint . --ext .ts,.tsx,.mjs,.js`) and exits 0. If an old error still shows in the editor, restart the ESLint/TypeScript language servers (or reload the workspace) — it's stale server state, not a config problem.
 
@@ -30,6 +30,10 @@ All tasks below have been **implemented and verified**: `pnpm build` ✅ (no war
 | 14 | Close-all modal: real focus trap + initial-focus selector fix | ✅ Done | `Popup.tsx` |
 | 15 | Theme zero-flash: synchronous localStorage preload mirror + `storage.onChanged` sync | ✅ Done | `public/theme-preload.js`, `utils/theme.ts` |
 | 16 | Manual-test driver: 74/74 checks against real Chrome (incl. SW-tick, import round-trip, focus trap) | ✅ Done | `scripts/e2e/manual-test.mjs`, `docs/manual-test-results.md` |
+| 17 | **Chrome side panel**: manifest `sidePanel` + `side_panel.default_path`, `src/sidepanel/` page (same app, fluid layout), header toggle after the theme icon, `adhd_sidepanel_open` lifecycle flag (pagehide/unload — not beforeunload), SW timer-surface guard includes SIDE_PANEL, Firefox build strips side panel bits | ✅ Done | `manifest.json`, `src/sidepanel/`, `src/shared/sidePanel.ts`, `Header.tsx`, `Popup.tsx`, `service-worker.ts`, `scripts/build-firefox.mjs`, `scripts/e2e/sidepanel-smoke.mjs` |
+| 18 | **Live dynamic data**: popup/side panel subscribe to `tabs.onCreated/onRemoved/onMoved/onActivated/onAttached/onDetached/onReplaced/onUpdated` (debounced) + `windows.onRemoved/onFocusChanged` + `storage.onChanged` (sessions, blocked sites, timer state, stats, focus state) — every surface updates instantly when tabs/windows change or the other surface writes | ✅ Done | `useTabs.ts`, `useSessions.ts`, `useBlockedSites.ts`, `useTimer.ts`, `Popup.tsx` |
+| 19 | **Multi-window support**: tabs grouped per window in the Tabs view (Window 1/2/…, current marked); Save session prompts which window(s) to snapshot (never silently merges all); Close All / Close Window window-aware (modal shows per-window breakdown); undo-close restores into the original window; Quick Actions show window count | ✅ Done | `tabService.ts`, `TabGroup.tsx`, `SessionSaver.tsx`, `QuickActions.tsx`, `Popup.tsx`, `utils/helpers.ts` |
+| 20 | Multi-window + live-data verification: e2e 49/49 (incl. §9c), manual-test §12 4/4, unit tests 267 | ✅ Done | `scripts/e2e/chrome-e2e.mjs`, `scripts/e2e/manual-test.mjs`, `tests/` |
 
 Manual testing checklist: see **Section 6** below.
 
@@ -304,6 +308,8 @@ A persistent, extension-loaded test environment is built and verified:
   - `chrome-devtools-mcp-attach` → attaches to the running instance via `--browserUrl http://127.0.0.1:9222`;
   - `chrome-devtools-mcp-launch` → launches its own CfT with the extension (self-contained).
 - **`node scripts/e2e/interactive-smoke.mjs`** — quick CDP smoke (header, 5 nav tabs, quote, focus toggle, heartbeat, no overflow) against the running instance; **passes**.
+- **`node scripts/e2e/multiwindow-smoke.mjs`** — real-browser smoke of the live-data + multi-window features against the running instance (live tab create/close, per-window grouping, save-window prompt, close-window action); **9/9 passes**.
+- **`scripts/e2e/sidepanel-smoke.mjs`** — real-browser smoke of the Chrome side panel (toggle placement/state, panel render, timer surface, theme sync, responsive widths); **14/14 passes**.
 - **`scripts/e2e/discover-extension.mjs`** — robust extension-id discovery (profile-path match beats CDP targets; the MV3 service worker is often dormant and Chrome component extensions can share `service-worker-loader.js`).
 - **`docs/manual-test-plan.md`** — full human test plan: §1–12 feature/edge-case matrix (60+ checks), §13 release gate, §10 fixtures, Appendix A storage-key cheat sheet.
 - **`scripts/e2e/test-fixtures/`** — import fixtures (`valid-backup.json`, `partial-backup.json`, `malformed-sessions.json`, `hostile-file.json`, `non-object.json`, `blocked-site-match-cases.json`), guarded by `tests/fixtures.test.ts` (6 tests) so they can't drift from `validateBackupData`.
@@ -329,3 +335,31 @@ A persistent, extension-loaded test environment is built and verified:
   8. Blocker input rejected pasted URLs and gave no duplicate feedback → normalize-then-validate + "already blocked" toast.
   9. Session rename had no UI → inline ✏️ editor.
 - Remaining human-only checks (documented): toolbar popup interaction, macOS notification banner, Firefox §12 interactive pass, native file-picker click.
+
+---
+
+## 16. Live Dynamic Data + Multi-Window Support (added 2026-08-03)
+
+### 16.1 Live dynamic data — everything updates automatically
+
+Before this pass the popup only queried tabs **on mount** and after its own actions. Any tab created/closed/moved in the browser (or by the side panel, or by the service worker) left the UI stale until a manual refresh. Now:
+
+- **`useTabs`** subscribes to `tabs.onCreated`, `tabs.onRemoved`, `tabs.onMoved`, `tabs.onActivated`, `tabs.onAttached`, `tabs.onDetached`, `tabs.onReplaced`, `tabs.onUpdated` (debounced 150 ms — it fires on every title/favicon change), `windows.onRemoved` and `windows.onFocusChanged`. Every event re-queries `chrome.tabs`/`chrome.windows`, so closing a tab, opening a new one, or opening/closing a window is reflected instantly.
+- **`useSessions` / `useBlockedSites`** mirror their storage keys via `storage.onChanged` — a save in the side panel appears in the popup immediately, and vice-versa.
+- **`useTimer`** mirrors `adhd_active_timer` + `adhd_timer_settings` from storage, so popup ↔ side panel countdowns stay in lock-step. **Tick ownership:** when both surfaces are open, only the popup owns the 1 s tick (`runtime.getContexts` — it has the highest priority); the side panel mirrors. This prevents the timer running at double speed (both surfaces ticking). Firefox (no `getContexts`, no side panel) is unaffected.
+- **`Popup`** refreshes daily stats + focus state via `storage.onChanged` (blocker counters written by the service worker show up live).
+
+### 16.2 Multi-window distinction
+
+- **Tabs view** groups tabs by window: `TabGroup` renders “Window 1 / Window 2 / …” sections (stable numbering by ascending window id), the focused window is marked with a dot, and each section gets a “✕ Close” button for that window's non-pinned tabs. Single window → plain unwrapped list (no noise).
+- **Save session prompts the window selection.** With 2+ windows the save dialog shows a checkbox per window (“Save tabs from which windows?”), current window pre-selected, Save disabled until ≥1 window is checked. It never silently merges every window into one session — “Window 2 only”, “Window 1 + 3”, etc. are explicit user choices.
+- **Close All / Close Window** are window-aware: “Close Window” (quick action) closes the current window's non-pinned tabs; “Close All” closes across all windows; the confirmation modal shows a per-window breakdown when >1 window is involved. Both record every tab for undo.
+- **Undo-close restores into the original window** (`tabs.create({ windowId })`, falling back to the current window if the original was closed).
+- **Quick Actions** info card shows “N windows” when >1.
+
+### 16.3 Verification
+
+- `pnpm lint` clean · `pnpm test` **267/267** · `pnpm build` clean · `pnpm lint:firefox` 0 errors.
+- `node scripts/e2e/chrome-e2e.mjs` → **49/49** (new §9c: live create/close, 2-window grouping, save-prompt selection, close-window modal + action).
+- `node scripts/e2e/manual-test.mjs` → **77 PASS / 0 FAIL / 1 slow-skip** (new §12.1–12.4).
+- Docs: `docs/manual-test-plan.md` §12 (multi-window & live data), `docs/manual-test-results.md` §12.

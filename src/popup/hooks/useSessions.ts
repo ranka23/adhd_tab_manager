@@ -1,11 +1,23 @@
 /**
  * useSessions hook — manages saved tab sessions (save/restore/delete).
  * Provides session-related state and actions for SessionSaver and TabGroup.
+ *
+ * LIVE DATA: sessions live in chrome.storage.local, so the hook mirrors the
+ * `adhd_sessions` key via storage.onChanged. When the popup and side panel are
+ * open at the same time (or the background writes sessions), both surfaces
+ * update instantly without a manual refresh.
+ *
+ * MULTI-WINDOW: `save` accepts an explicit list of window IDs to snapshot —
+ * the UI prompts the user which window(s) to include (e.g. "Window 1 only" or
+ * "Window 2 + 3"), instead of silently merging every open window into one
+ * session.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import type { TabSession } from '../types';
 import * as tabService from '../services/tabService';
+import { STORAGE_KEYS } from '../../shared/constants';
+import { browser } from '../../shared/browser';
 
 /** Return type for the useSessions hook */
 interface UseSessionsReturn {
@@ -17,8 +29,8 @@ interface UseSessionsReturn {
   error: string | null;
   /** Refresh sessions from storage */
   refresh: () => Promise<void>;
-  /** Save a new session with the given name and icon */
-  save: (name: string, icon: string) => Promise<TabSession>;
+  /** Save a new session from the given windows with the given name and icon */
+  save: (name: string, icon: string, windowIds: number[]) => Promise<TabSession>;
   /** Restore a session by ID */
   restore: (sessionId: string) => Promise<void>;
   /** Delete a session by ID */
@@ -48,12 +60,14 @@ export function useSessions(): UseSessionsReturn {
     }
   }, []);
 
-  /** Saves a new session with the current window's tabs */
+  /** Saves a new session from the tabs of the selected windows */
   const save = useCallback(
-    async (name: string, icon: string): Promise<TabSession> => {
+    async (name: string, icon: string, windowIds: number[]): Promise<TabSession> => {
       try {
         setError(null);
-        const currentTabs = await tabService.getCurrentWindowTabs();
+        // Snapshot the tabs of exactly the windows the user picked.
+        const perWindow = await Promise.all(windowIds.map((id) => tabService.getWindowTabs(id)));
+        const currentTabs = perWindow.flat();
         const session = await tabService.saveSession(name, currentTabs, icon);
         await refresh();
         return session;
@@ -109,6 +123,23 @@ export function useSessions(): UseSessionsReturn {
     },
     [refresh],
   );
+
+  /* LIVE DATA — mirror storage writes from any context (other popup, side
+   * panel, background) so the session list never goes stale. */
+  useEffect(() => {
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ): void => {
+      if (area === 'local' && changes[STORAGE_KEYS.SESSIONS]) {
+        void refresh();
+      }
+    };
+    browser.storage.onChanged.addListener(onChanged);
+    return (): void => {
+      browser.storage.onChanged.removeListener(onChanged);
+    };
+  }, [refresh]);
 
   // Load sessions on mount
   useEffect(() => {

@@ -4,7 +4,7 @@
  * Promise-based methods for tab management.
  */
 
-import type { TabInfo, TabSession, ClosedTabRecord } from '../types';
+import type { TabInfo, TabSession, ClosedTabRecord, WindowInfo } from '../types';
 import { chromeTabToTabInfo, createSession } from '../utils/helpers';
 import { MAX_CLOSED_TABS_HISTORY, MAX_SESSIONS, STORAGE_KEYS } from '../../shared/constants';
 import { browser } from '../../shared/browser';
@@ -21,6 +21,43 @@ export async function getAllTabs(): Promise<TabInfo[]> {
       .filter((tab): tab is TabInfo => tab !== null);
   } catch (err) {
     console.error('tabService: Failed to query all tabs:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetches metadata for all open browser windows (no tab population).
+ * Used to group the tab list per window and label windows in the UI.
+ */
+export async function getWindows(): Promise<WindowInfo[]> {
+  try {
+    const wins = await browser.windows.getAll({ populate: false });
+    return wins
+      .map((win) => ({
+        id: win.id ?? 0,
+        focused: win.focused ?? false,
+        type: win.type,
+      }))
+      .filter((win) => win.id > 0)
+      .sort((a, b) => a.id - b.id);
+  } catch (err) {
+    console.error('tabService: Failed to query windows:', err);
+    return [];
+  }
+}
+
+/**
+ * Gets tabs for a single window by its window ID.
+ * Used for window-specific session saving and per-window close actions.
+ */
+export async function getWindowTabs(windowId: number): Promise<TabInfo[]> {
+  try {
+    const chromeTabs = await browser.tabs.query({ windowId });
+    return chromeTabs
+      .map((tab) => chromeTabToTabInfo(tab))
+      .filter((tab): tab is TabInfo => tab !== null);
+  } catch (err) {
+    console.error('tabService: Failed to query window tabs:', err);
     return [];
   }
 }
@@ -110,6 +147,44 @@ async function recordClosedTab(tab: TabInfo): Promise<void> {
 }
 
 /**
+ * Closes all non-pinned tabs in a single window, recording each for undo.
+ * Returns the number of tabs closed.
+ */
+export async function closeWindowTabs(windowId: number): Promise<number> {
+  try {
+    const chromeTabs = await browser.tabs.query({ windowId });
+    const closable = chromeTabs.filter((tab) => !tab.pinned && tab.id);
+    const ids = closable.map((tab) => tab.id as number);
+    if (ids.length > 0) {
+      await closeTabs(ids);
+    }
+    return ids.length;
+  } catch (err) {
+    console.error('tabService: Failed to close window tabs:', err);
+    return 0;
+  }
+}
+
+/**
+ * Closes all non-pinned tabs across every open window, recording each for undo.
+ * Returns the number of tabs closed.
+ */
+export async function closeAllNonPinnedTabs(): Promise<number> {
+  try {
+    const chromeTabs = await browser.tabs.query({});
+    const closable = chromeTabs.filter((tab) => !tab.pinned && tab.id);
+    const ids = closable.map((tab) => tab.id as number);
+    if (ids.length > 0) {
+      await closeTabs(ids);
+    }
+    return ids.length;
+  } catch (err) {
+    console.error('tabService: Failed to close all tabs:', err);
+    return 0;
+  }
+}
+
+/**
  * Restores the most recently closed tab (undo-close).
  * Opens the tab at its original position if possible.
  */
@@ -129,12 +204,23 @@ export async function restoreLastClosedTab(): Promise<boolean> {
       console.error('tabService: Invalid URL for tab restore:', record.tab.url);
       return false;
     }
-    // Open the tab at the same position
-    await browser.tabs.create({
-      url: record.tab.url,
-      active: true,
-      index: record.originalIndex,
-    });
+    // Open the tab at the same position, back in its original window when it
+    // still exists (multi-window support) so restores never jump windows.
+    try {
+      await browser.tabs.create({
+        url: record.tab.url,
+        active: true,
+        index: record.originalIndex,
+        windowId: record.tab.windowId,
+      });
+    } catch {
+      // The original window is gone (closed) — fall back to the current window.
+      await browser.tabs.create({
+        url: record.tab.url,
+        active: true,
+        index: record.originalIndex,
+      });
+    }
 
     // Remove from history
     closedTabs.shift();

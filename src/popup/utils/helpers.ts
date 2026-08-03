@@ -3,7 +3,7 @@
  * These are pure functions with no side effects, making them easy to test.
  */
 
-import type { TabInfo, TabSession, DailyStats } from '../types';
+import type { TabInfo, TabSession, DailyStats, WindowInfo } from '../types';
 
 /**
  * Generates a unique ID using a combination of timestamp and random characters.
@@ -154,6 +154,36 @@ export function createDefaultDailyStats(): DailyStats {
  */
 export function sortTabsByIndex(tabs: TabInfo[]): TabInfo[] {
   return [...tabs].sort((a, b) => a.index - b.index);
+}
+
+/**
+ * Groups tabs by their window ID, sorting each group by tab index.
+ * Used to render separate window sections in the Tabs view when the user has
+ * more than one window open.
+ */
+export function groupTabsByWindow(tabs: TabInfo[]): Map<number, TabInfo[]> {
+  const grouped = new Map<number, TabInfo[]>();
+  for (const tab of tabs) {
+    const list = grouped.get(tab.windowId) ?? [];
+    list.push(tab);
+    grouped.set(tab.windowId, list);
+  }
+  for (const list of grouped.values()) {
+    list.sort((a, b) => a.index - b.index);
+  }
+  return grouped;
+}
+
+/**
+ * Computes a human-friendly label for a window ("Window 1", "Window 2", …).
+ * Windows are numbered by ascending window ID so the ordering is stable for
+ * the lifetime of the browser session.
+ */
+export function getWindowLabel(windowId: number, windows: WindowInfo[]): string {
+  if (windows.length === 0) return `Window ${windowId}`;
+  const sorted = [...windows].sort((a, b) => a.id - b.id);
+  const index = sorted.findIndex((w) => w.id === windowId);
+  return index >= 0 ? `Window ${index + 1}` : `Window ${windowId}`;
 }
 
 /**

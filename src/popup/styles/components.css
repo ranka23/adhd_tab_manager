@@ -47,6 +47,42 @@
   background: var(--hover-tint);
 }
 
+/* Side panel toggle — same circular icon-button shape as the theme toggle */
+.side-panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.side-panel-toggle:hover {
+  background: var(--hover-tint);
+  color: var(--text-primary);
+}
+
+.side-panel-toggle:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Active state — the side panel is open */
+.side-panel-toggle--active {
+  background: var(--primary-color);
+  color: var(--text-inverse);
+}
+
+.side-panel-toggle--active:hover {
+  background: var(--primary-hover);
+  color: var(--text-inverse);
+}
+
 .header-title {
   display: flex;
   align-items: center;
@@ -103,6 +139,63 @@
 
 .focus-toggle-icon {
   font-size: 16px;
+}
+
+/* ============================================================
+ * RESPONSIVE HEADER
+ * The header (title + up to 5 action buttons) is the widest
+ * element in the app, so it compacts first on narrow viewports.
+ * These rules live here (not popup.css) so they win the cascade
+ * over the base sizes above — popup.css is imported first.
+ * ============================================================ */
+@media (max-width: 420px) {
+  .app-header {
+    padding: 10px 12px;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .theme-toggle,
+  .side-panel-toggle {
+    width: 32px;
+    height: 32px;
+  }
+
+  .focus-toggle {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .header-text {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-header {
+    padding: 8px 10px;
+  }
+
+  .header-actions {
+    gap: 4px;
+  }
+
+  .theme-toggle,
+  .side-panel-toggle {
+    width: 30px;
+    height: 30px;
+  }
+
+  .focus-toggle {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .header-text {
+    font-size: 15px;
+  }
 }
 
 /* ============================================================
@@ -278,6 +371,74 @@
   color: var(--text-muted);
   font-size: 14px;
   margin: 0;
+}
+
+/* Per-window sections (multi-window mode) */
+.tab-group__window {
+  margin-bottom: 10px;
+}
+
+.tab-group__window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  margin: 0 -8px 4px;
+  border-radius: 8px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary-border);
+}
+
+.tab-group__window--current .tab-group__window-header {
+  border-color: var(--primary-color);
+}
+
+.tab-group__window-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tab-group__window-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.tab-group__window-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.tab-group__window-close {
+  border: none;
+  background: transparent;
+  color: var(--danger-color, var(--text-secondary));
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.tab-group__window-close:hover {
+  background: var(--danger-bg, var(--hover-tint));
+}
+
+.tab-group__window-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* ============================================================
@@ -707,6 +868,65 @@
 .session-saver__icon-btn--selected {
   border-color: var(--primary-color);
   background: var(--primary-light);
+}
+
+/* Multi-window save prompt */
+.session-saver__windows {
+  margin-bottom: 12px;
+}
+
+.session-saver__windows-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 8px 0;
+}
+
+.session-saver__windows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-saver__window-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.session-saver__window-option:hover {
+  border-color: var(--primary-color);
+}
+
+.session-saver__window-option--selected {
+  border-color: var(--primary-color);
+  background: var(--primary-light);
+}
+
+.session-saver__window-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-color);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.session-saver__window-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.session-saver__window-count {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .session-saver__dialog-actions {

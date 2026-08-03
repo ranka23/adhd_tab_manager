@@ -18,10 +18,11 @@
 7. [Launching a persistent test environment](#7-launching-a-persistent-test-environment)
 8. [The #1 gotcha: discovering the extension ID](#8-the-1-gotcha-discovering-the-extension-id)
 9. [Driving the extension popup over CDP](#9-driving-the-extension-popup-over-cdp)
-10. [Pitfalls & edge cases](#10-pitfalls--edge-cases)
-11. [Getting-started checklist (copy-paste)](#11-getting-started-checklist)
-12. [Testing the ADHD Tab Manager (worked example)](#12-testing-the-adhd-tab-manager-worked-example)
-13. [Appendix: raw CDP without an MCP server](#13-appendix-raw-cdp-without-an-mcp-server)
+10. [Driving the Chrome side panel over CDP](#10-driving-the-chrome-side-panel-over-cdp)
+11. [Pitfalls & edge cases](#11-pitfalls--edge-cases)
+12. [Getting-started checklist (copy-paste)](#12-getting-started-checklist)
+13. [Testing the ADHD Tab Manager (worked example)](#13-testing-the-adhd-tab-manager-worked-example)
+14. [Appendix: raw CDP without an MCP server](#14-appendix-raw-cdp-without-an-mcp-server)
 
 ---
 
@@ -329,7 +330,58 @@ The built output keeps the `src/...` layout for @crxjs projects, but vanilla pro
 
 ---
 
-## 10. Pitfalls & edge cases
+## 10. Driving the Chrome side panel over CDP
+
+MV3 side panels (Chrome 114+, `"side_panel"` in the manifest + the `sidePanel` permission) are
+**real extension pages** — same rules as popups, plus a few panel-specific gotchas:
+
+### 10.1 The panel page
+
+`side_panel.default_path` (e.g. `src/sidepanel/index.html`) is a normal extension page. You can
+open it **as a tab** and drive it exactly like the popup (§9). This is the reliable way to test
+rendering/behavior in headless Chrome:
+
+```
+navigate to chrome-extension://<id>/src/sidepanel/index.html
+snapshot → expect the same app shell as the popup (header, nav tabs, …)
+```
+
+### 10.2 Opening the *real* panel
+
+`chrome.sidePanel.open({ windowId })` **requires a user gesture** — a scripted `el.click()` via a
+plain `Runtime.evaluate` will fail with "sidePanel.open() may only be called in response to a user
+action". Two ways to get a genuine gesture:
+
+1. **MCP click tool** — it dispatches real input events at the OS/CDP level, which counts.
+2. **Raw CDP** — pass `userGesture: true` to `Runtime.evaluate` (this repo's e2e harness does
+   exactly this: `{ expression, awaitPromise: true, returnByValue: true, userGesture: true }`).
+
+Worked flow (this repo):
+
+```
+1. Open the popup as a tab.
+2. Snapshot → click the side-panel icon (aria-label "Open in side panel").
+3. Wait: chrome.storage.local.get('adhd_sidepanel_open') === true
+   (the panel page publishes this flag on mount — Chrome has no "is the panel open" query API).
+4. Assert the header icon flipped to .side-panel-toggle--active.
+```
+
+### 10.3 Gotchas
+
+- **No query API** for open/close state — the page must self-report (storage flag / message).
+- **No `close()`** in most Chrome versions — clicking the toggle when open is a no-op
+  (brings the panel to front). Treat it as open-only in tests.
+- **Headless works** — the panel page mounts in `--headless=new` (verified: this repo's e2e
+  opens the real panel and the storage flag flips).
+- **Firefox / Safari have no side panel API** — the toggle is hidden there, and the Firefox
+  build strips the manifest key. Don't test panel flows in Firefox.
+- **Double-decrement guard** — if the panel ticks the pomodoro locally (this one does), the
+  service worker must treat `SIDE_PANEL` contexts like `POPUP` contexts and skip its own
+  per-minute tick (`runtime.getContexts({ contextTypes: ['POPUP', 'SIDE_PANEL'] })`).
+
+---
+
+## 11. Pitfalls & edge cases
 
 | # | Pitfall | Symptom | Fix |
 |---|---|---|---|
@@ -346,7 +398,7 @@ The built output keeps the `src/...` layout for @crxjs projects, but vanilla pro
 
 ---
 
-## 11. Getting-started checklist
+## 12. Getting-started checklist
 
 For a brand-new agent joining this repo:
 
@@ -387,7 +439,7 @@ step 1 (stale/missing `dist/`) followed by §10 pitfalls 1–2.
 
 ---
 
-## 12. Testing the ADHD Tab Manager (worked example)
+## 13. Testing the ADHD Tab Manager (worked example)
 
 - **Popup URL:** `chrome-extension://<id>/src/popup/index.html`
 - **What to exercise:** header/branding, 5 nav tabs, daily quote, focus toggle, add-tab form,
@@ -401,7 +453,7 @@ step 1 (stale/missing `dist/`) followed by §10 pitfalls 1–2.
 
 ---
 
-## 13. Appendix: raw CDP without an MCP server
+## 14. Appendix: raw CDP without an MCP server
 
 If no MCP client is available, the agent can drive Chrome directly over the WebSocket exposed by
 `--remote-debugging-port` (Node ≥ 22 has a global `WebSocket`/`fetch`). Read

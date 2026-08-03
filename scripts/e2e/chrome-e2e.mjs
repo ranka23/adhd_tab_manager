@@ -14,6 +14,10 @@
  *   - distraction blocker add / remove
  *   - session save / delete / undo-restore
  *   - service worker: alarms registered + message handler responds
+ *   - side panel: toggle placement/state, panel page renders (Chromium)
+ *   - live data: tab create/close updates the UI without a reload
+ *   - multi-window: per-window grouping, save-session window prompt,
+ *     close-window action, close-all breakdown
  *   - responsiveness: no horizontal overflow at 360 / 400 / 480 / 800 px
  *   - screenshots of every tab into artifacts/ for visual review
  *
@@ -392,6 +396,210 @@ async function main() {
       : fail('alarms registered', `got ${alarms.join(', ')}`);
     const msgReply = await evalIn(`chrome.runtime.sendMessage({type:'GET_FOCUS_STATE'}).then(r => r && r.success)`);
     msgReply === true ? pass('SW message handler responds') : fail('SW message handler responds', String(msgReply));
+
+    console.log('\n--- 9b. Side panel (Chromium) ---');
+    // The toggle icon sits in the header actions, right after the theme toggle
+    // and before the focus toggle (Chrome only).
+    const spLayout = await evalIn(`(() => {
+      const actions = [...document.querySelectorAll('.header-actions > *')];
+      const byClass = (c) => actions.findIndex((b) => b.classList.contains(c));
+      const themeIdx = actions.findIndex(
+        (b) => b.classList.contains('theme-toggle') && (b.getAttribute('aria-label') || '').includes('dark mode'),
+      );
+      const spIdx = byClass('side-panel-toggle');
+      const focusIdx = byClass('focus-toggle');
+      return { found: spIdx !== -1, afterTheme: spIdx > themeIdx, beforeFocus: spIdx < focusIdx };
+    })()`);
+    spLayout.found && spLayout.afterTheme && spLayout.beforeFocus
+      ? pass(`side panel toggle after theme toggle (found=${spLayout.found}, afterTheme=${spLayout.afterTheme}, beforeFocus=${spLayout.beforeFocus})`)
+      : fail('side panel toggle placement', JSON.stringify(spLayout));
+
+    // Clicking the toggle (user gesture) opens the panel — the panel page sets
+    // adhd_sidepanel_open on mount, which flips the header icon to active.
+    await clickAria('Open in side panel');
+    await waitFor(
+      `chrome.storage.local.get('adhd_sidepanel_open').then(r => r.adhd_sidepanel_open === true)`,
+      'side panel page mounted',
+      10000,
+    );
+    pass('toggle click opens the side panel');
+    await waitFor(
+      `document.querySelector('.side-panel-toggle')?.classList.contains('side-panel-toggle--active')`,
+      'toggle icon active',
+    );
+    pass('toggle icon reflects open state');
+
+    // Simulate the panel closing (beforeunload clears the flag) — icon relaxes.
+    await evalIn(`chrome.storage.local.set({ adhd_sidepanel_open: false })`);
+    await waitFor(`!document.querySelector('.side-panel-toggle')?.classList.contains('side-panel-toggle--active')`, 'toggle icon inactive');
+    pass('toggle icon reflects closed state');
+
+    // The side panel surface renders the same app with a fluid layout.
+    const sidePanelUrl = `chrome-extension://${extId}/src/sidepanel/index.html`;
+    const { targetId: spTarget } = await cdp.send('Target.createTarget', { url: sidePanelUrl });
+    const { sessionId: spSid } = await cdp.send('Target.attachToTarget', { targetId: spTarget, flatten: true });
+    await waitForSession(spSid, `!!document.querySelector('.app-header')`, 'side panel app header');
+    const spState = await evalInSession(spSid, `(() => ({
+      nav: document.querySelectorAll('.nav-tab').length,
+      fluid: document.body.classList.contains('sidepanel-body'),
+      heartbeat: null,
+    }))()`);
+    spState.nav === 5
+      ? pass('side panel renders all 5 nav tabs')
+      : fail('side panel renders all 5 nav tabs', `nav=${spState.nav}`);
+    spState.fluid
+      ? pass('side panel uses the fluid sidepanel layout')
+      : fail('side panel uses the fluid sidepanel layout', 'body missing sidepanel-body class');
+    const spHeartbeat = await evalInSession(spSid, `chrome.storage.local.get('adhd_popup_heartbeat').then(r => typeof r.adhd_popup_heartbeat === 'number')`);
+    spHeartbeat
+      ? pass('side panel writes the popup heartbeat (SW double-decrement guard)')
+      : fail('side panel writes the popup heartbeat', 'no heartbeat');
+    if (withScreenshots) {
+      const { data: spShot } = await cdp.send('Page.captureScreenshot', { format: 'png' }, spSid);
+      writeFileSync(join(artifactsDir, 'chrome-sidepanel.png'), Buffer.from(spShot, 'base64'));
+      console.log(`  📸 ${join(artifactsDir, 'chrome-sidepanel.png')}`);
+    }
+
+    console.log('\n--- 9c. Live data + multi-window ---');
+    // The popup + side panel are open as tabs in window 1 — read the current
+    // count from the Tabs view, then create a real tab OUTSIDE the popup and
+    // assert the UI updates on its own (no reload).
+    await clickNav('Tabs');
+    await waitFor(`!!document.querySelector('.tab-group__count')`, 'tab count');
+    const beforeCreate = await evalIn(
+      `chrome.tabs.query({}).then(ts => ts.length)`,
+    );
+    const createdTab = await evalIn(
+      `chrome.tabs.create({ url: 'https://live-test.example.com/' }).then(t => t.id)`,
+    );
+    await waitFor(
+      `chrome.tabs.query({}).then(ts => ts.length === ${beforeCreate + 1})`,
+      'tab count increments after tabs.create',
+      8000,
+    );
+    // The UI must reflect it without any reload.
+    await waitFor(
+      `document.querySelector('.tab-group__count')?.textContent === '${beforeCreate + 1}'`,
+      'UI tab count live-updates on tab create',
+      8000,
+    );
+    pass('live: creating a tab updates the UI automatically');
+    await waitFor(
+      `[...document.querySelectorAll('.tab-card__domain')].some(e => (e.textContent||'').includes('live-test'))`,
+      'new tab appears in the list',
+      8000,
+    );
+    pass('live: new tab card appears without refresh');
+
+    // Close it from outside — the list must shrink back.
+    await evalIn(`chrome.tabs.remove(${createdTab})`);
+    await waitFor(
+      `chrome.tabs.query({}).then(ts => ts.length === ${beforeCreate})`,
+      'tab removed',
+      8000,
+    );
+    await waitFor(
+      `document.querySelector('.tab-group__count')?.textContent === '${beforeCreate}'`,
+      'UI tab count live-updates on tab close',
+      8000,
+    );
+    pass('live: closing a tab updates the UI automatically');
+
+    // Open a second window with one tab.
+    await evalIn(
+      `chrome.windows.create({ url: 'https://window2-test.example.com/', focused: false }).then(w => w.id)`,
+    );
+    await waitFor(
+      `chrome.windows.getAll().then(ws => ws.length === 2)`,
+      'second window open',
+      8000,
+    );
+    // Tabs view groups per window.
+    await waitFor(
+      `document.querySelectorAll('.tab-group__window').length === 2`,
+      'tabs grouped into 2 window sections',
+      8000,
+    );
+    const winLabels = await evalIn(
+      `[...document.querySelectorAll('.tab-group__window-label')].map(e => e.textContent.trim())`,
+    );
+    winLabels.join() === 'Window 1,Window 2'
+      ? pass(`multi-window: Tabs view groups by window (${winLabels.join(', ')})`)
+      : fail('multi-window: Tabs view groups by window', `labels=${winLabels.join(',')}`);
+    // Display label is index-based ("Window 2"), independent of the raw window id.
+    const win2Label = 'Window 2';
+    await screenshot('multi-window-tabs-400');
+
+    // Save a session from Window 2 ONLY — the save dialog must prompt for the
+    // window selection and not silently save everything.
+    await clickNav('Sessions');
+    await evalIn(
+      `(() => { const b = [...document.querySelectorAll('.session-saver__actions button')].find(b => (b.textContent||'').trim().startsWith('💾 Save Tabs')); if (!b || b.disabled) return false; b.click(); return true; })()`,
+    );
+    await waitFor(`!!document.querySelector('.session-saver__dialog')`, 'save dialog');
+    const windowOptions = await evalIn(
+      `document.querySelectorAll('.session-saver__window-option').length`,
+    );
+    windowOptions === 2
+      ? pass('multi-window: save dialog asks which window(s) to save (2 options)')
+      : fail('multi-window: save dialog asks which window(s) to save', `options=${windowOptions}`);
+    // Default = current window (window 1). Toggle it off and window 2 on so
+    // only Window 2 is saved.
+    await evalIn(
+      `(() => { const boxes = [...document.querySelectorAll('.session-saver__window-checkbox')]; if (boxes.length < 2) return false; boxes[0].click(); boxes[1].click(); return true; })()`,
+    );
+    await sleep(200);
+    await setInputValue('.session-saver__input', 'Multi-Win Session');
+    await sleep(200);
+    const saveEnabled = await evalIn(
+      `(() => { const b = [...document.querySelectorAll('.session-saver__dialog-actions button')].find(b => (b.textContent||'').trim() === 'Save'); return b ? !b.disabled : false; })()`,
+    );
+    saveEnabled
+      ? pass('multi-window: save enabled with only Window 2 selected')
+      : fail('multi-window: save enabled with only Window 2 selected', 'disabled');
+    await clickByText('Save', '.session-saver__dialog-actions button');
+    await waitFor(
+      `chrome.storage.local.get('adhd_sessions').then(r => (r.adhd_sessions||[])[0]?.name === 'Multi-Win Session')`,
+      'session saved',
+      8000,
+    );
+    const savedTabCount = await evalIn(
+      `chrome.storage.local.get('adhd_sessions').then(r => (r.adhd_sessions||[])[0].tabs.length)`,
+    );
+    savedTabCount === 1
+      ? pass('multi-window: session contains ONLY the selected window tab (1 tab)')
+      : fail('multi-window: session contains ONLY the selected window tab', `tabs=${savedTabCount}`);
+    await screenshot('multi-window-save-400');
+
+    // Close Window 2 from the Tabs view — its tabs close, window 1 stays.
+    await clickNav('Tabs');
+    const closeWinBtn = await evalIn(
+      `(() => { const b = [...document.querySelectorAll('.tab-group__window-close')].find(b => (b.getAttribute('aria-label')||'').includes('Window 2')); if (!b) return null; b.click(); return true; })()`,
+    );
+    if (!closeWinBtn) {
+      fail('multi-window: close-window button present for Window 2', 'not found');
+    } else {
+      await waitFor(`!!document.querySelector('.modal-overlay')`, 'close-window modal');
+      const modalText = await evalIn(`document.querySelector('.confirm-dialog__message')?.textContent`);
+      (modalText || '').includes(win2Label)
+        ? pass('multi-window: close modal names the target window')
+        : fail('multi-window: close modal names the target window', modalText);
+      await clickByText('Close 1');
+      await waitFor(
+        `chrome.windows.getAll().then(ws => ws.length === 1)`,
+        'window 2 closed after close-window action',
+        8000,
+      );
+      pass('multi-window: close-window action closes only that window');
+      // Single-window mode hides the per-window section wrappers entirely.
+      await waitFor(
+        `document.querySelectorAll('.tab-group__window').length === 0`,
+        'Tabs view back to a single (unwrapped) window list',
+        8000,
+      );
+      pass('multi-window: UI collapses back to one window');
+    }
+    await screenshot('single-window-after-close-400');
 
     console.log('\n--- 10. Responsiveness (no horizontal overflow) ---');
     const viewports = [[360, 560, 'mobile-narrow'], [400, 600, 'popup-standard'], [480, 700, 'popup-wide'], [800, 700, 'tab-wide']];

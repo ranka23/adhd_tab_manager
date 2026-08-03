@@ -82,6 +82,11 @@ manifest.browser_specific_settings = {
 // Chrome-only: a generated key that pins the extension ID in Chrome.
 delete manifest.key;
 
+// Chromium-only: Firefox has no side panel API — drop the manifest key and
+// the permission so the addons-linter doesn't flag them as unsupported.
+delete manifest.side_panel;
+manifest.permissions = (manifest.permissions ?? []).filter((p) => p !== 'sidePanel');
+
 // Firefox uses an event page (classic script), not a module service worker.
 manifest.background = { scripts: ['background.js'] };
 

@@ -23,6 +23,16 @@ export interface TabInfo {
   index: number;
 }
 
+/** Lightweight window metadata (used to group tabs by window in the UI) */
+export interface WindowInfo {
+  /** Chrome window ID */
+  id: number;
+  /** Whether this window is currently focused */
+  focused: boolean;
+  /** Window type — 'normal' | 'popup' | 'panel' | 'app' | 'devtools' */
+  type: string | undefined;
+}
+
 /** A saved session containing multiple tabs */
 export interface TabSession {
   /** Unique identifier for the session */

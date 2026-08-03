@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TabGroup } from '../../src/popup/components/TabGroup';
-import type { TabInfo } from '../../src/popup/types';
+import type { TabInfo, WindowInfo } from '../../src/popup/types';
 
 /** Builds a TabInfo fixture with sensible defaults. */
 const makeTab = (overrides: Partial<TabInfo> = {}): TabInfo => ({
@@ -22,22 +22,33 @@ const makeTab = (overrides: Partial<TabInfo> = {}): TabInfo => ({
 /** Local mirror of the component's props (interface is not exported). */
 interface TabGroupProps {
   tabs: TabInfo[];
+  windows: WindowInfo[];
+  currentWindowId?: number | null;
   onCloseTab: (tabId: number) => void;
   onTabClick?: (tab: TabInfo) => void;
+  onCloseWindow?: (windowId: number) => void;
 }
 
 /** Renders TabGroup with defaults and returns the props used. */
 const renderGroup = (partial: {
   tabs?: TabInfo[];
+  windows?: WindowInfo[];
+  currentWindowId?: number | null;
   onCloseTab?: (tabId: number) => void;
   onTabClick?: (tab: TabInfo) => void;
+  onCloseWindow?: (windowId: number) => void;
 } = {}): ReturnType<typeof render> & { props: TabGroupProps } => {
   const props: TabGroupProps = {
     tabs: partial.tabs ?? [],
+    windows: partial.windows ?? [{ id: 1, focused: true, type: 'normal' }],
+    currentWindowId: partial.currentWindowId ?? 1,
     onCloseTab: partial.onCloseTab ?? vi.fn(),
   };
   if (partial.onTabClick) {
     props.onTabClick = partial.onTabClick;
+  }
+  if (partial.onCloseWindow) {
+    props.onCloseWindow = partial.onCloseWindow;
   }
   const utils = render(<TabGroup {...props} />);
   return { ...utils, props };
@@ -92,5 +103,68 @@ describe('TabGroup', () => {
     // Sanity check: the component rendered with onTabClick undefined.
     expect(props.onTabClick).toBeUndefined();
     expect(screen.getByText('Alpha')).toBeInTheDocument();
+  });
+
+  /* ── MULTI-WINDOW ─────────────────────────────────────────── */
+  it('hides window headers when a single window is open', () => {
+    const tabs = [makeTab({ id: 1, title: 'Alpha' })];
+    renderGroup({ tabs, windows: [{ id: 1, focused: true, type: 'normal' }] });
+    expect(screen.queryByText('Window 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+  });
+
+  it('groups tabs into per-window sections when multiple windows are open', () => {
+    const tabs = [
+      makeTab({ id: 1, title: 'Alpha', windowId: 1, index: 0 }),
+      makeTab({ id: 2, title: 'Beta', windowId: 1, index: 1 }),
+      makeTab({ id: 3, title: 'Gamma', windowId: 2, index: 0 }),
+    ];
+    renderGroup({
+      tabs,
+      windows: [
+        { id: 1, focused: true, type: 'normal' },
+        { id: 2, focused: false, type: 'normal' },
+      ],
+      currentWindowId: 1,
+    });
+    expect(screen.getByText('Window 1')).toBeInTheDocument();
+    expect(screen.getByText('Window 2')).toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+    expect(screen.getByText('Gamma')).toBeInTheDocument();
+    // Counts appear in the window meta
+    expect(screen.getByText('2 tabs')).toBeInTheDocument();
+    expect(screen.getByText('1 tab')).toBeInTheDocument();
+  });
+
+  it('calls onCloseWindow with the window id for the window close button', () => {
+    const tabs = [
+      makeTab({ id: 1, title: 'Alpha', windowId: 1, index: 0 }),
+      makeTab({ id: 3, title: 'Gamma', windowId: 2, index: 0 }),
+    ];
+    const onCloseWindow = vi.fn();
+    renderGroup({
+      tabs,
+      windows: [
+        { id: 1, focused: true, type: 'normal' },
+        { id: 2, focused: false, type: 'normal' },
+      ],
+      currentWindowId: 1,
+      onCloseWindow,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Close 1 tab in Window 2' }));
+    expect(onCloseWindow).toHaveBeenCalledWith(2);
+  });
+
+  it('does not render a close button for a window with only pinned tabs', () => {
+    const tabs = [makeTab({ id: 3, title: 'Gamma', windowId: 2, index: 0, pinned: true })];
+    renderGroup({
+      tabs,
+      windows: [
+        { id: 1, focused: true, type: 'normal' },
+        { id: 2, focused: false, type: 'normal' },
+      ],
+    });
+    expect(screen.queryByRole('button', { name: /Close .* in Window 2/ })).not.toBeInTheDocument();
   });
 });

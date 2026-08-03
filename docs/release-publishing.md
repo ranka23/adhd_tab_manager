@@ -173,12 +173,57 @@ CWS_ITEM_ID=... node scripts/release/publish-chrome.mjs
 
 ## 5. Edge (manual, no API)
 
-Edge Add-ons has **no public publish API**. After each tag push:
-1. Grab `adhd-tab-manager-edge-1.0.0.zip` from the GitHub Release (or
-   `artifacts/release/zips/`).
-2. Upload at **https://partner.microsoft.com/dashboard/microsoftedge/**, set
-   listing text from `docs/STORE-LISTING.md`, screenshots from
-   `docs/screenshots/`.
+Edge Add-ons has **no public publish API** — every submission is manual via
+Partner Center. The **Edge zip is byte-identical to the Chrome zip** (Edge
+accepts Chrome MV3 builds), so you never rebuild anything.
+
+### 5a. First-time developer registration (free, ~10 minutes)
+
+1. Go to **https://partner.microsoft.com/dashboard/microsoftedge/**
+2. Sign in with a **Microsoft account** (any — e.g. your `@outlook.com` or a
+   work account; you can also create one from this page).
+3. Accept the developer agreement → complete the registration form
+   (developer name + email as they'll appear publicly).
+4. Verify your email when prompted. Some accounts are also asked for a phone
+   verification — this is a one-time Partner Center check, not an app review.
+
+### 5b. Create the submission
+
+1. In the dashboard, click **Create new → Extension**.
+2. **Upload the package**: drag `adhd-tab-manager-edge-1.0.0.zip` (from
+   `artifacts/release/zips/` or the GitHub Release).
+3. Wait for the package validation to finish (a few seconds — it checks the
+   MV3 manifest). If it shows errors, the zip is wrong — don't proceed.
+
+### 5c. Listing details (copy from `docs/STORE-LISTING.md`)
+
+| Field | Value |
+|---|---|
+| **Name** | `ADHD Tab Manager` |
+| **Short description** | `Declutter your browser and stay focused. Save sessions, block distractions, and track focus with a Pomodoro timer.` |
+| **Long description** | Paste from `docs/STORE-LISTING.md` → *Full description* |
+| **Category** | Productivity (or Utility) |
+| **Privacy policy URL** | `https://github.com/ranka23/adhd_tab_manager/blob/main/docs/PRIVACY-POLICY.md` |
+| **Website** | `https://github.com/ranka23/adhd_tab_manager` |
+| **Support URL** | `https://github.com/ranka23/adhd_tab_manager/issues` |
+
+### 5d. Screenshots (required)
+
+Upload from `docs/screenshots/` (same set as Chrome):
+- `home-light-1280x800.png`, `home-dark-640x400.png`,
+  `tabs-multiwindow-1280x800.png`, `sessions-640x400.png`,
+  `timer-running-640x400.png`, `blocked-sites-640x400.png`,
+  `sidepanel-1280x800.png` (and `sidepanel-400x700.png` if wanted).
+
+### 5e. Markets, age rating & submit
+
+1. **Markets**: pick *All markets* (or a subset).
+2. **Age rating**: complete the questionnaire (no data collection → minimal).
+3. Certify the declarations checkboxes, then **Submit for review**.
+
+Edge review typically takes **1–7 business days**. Once live, keep the version
+in sync with Chrome: bump `package.json` → tag → CI regenerates both zips and
+you re-upload the new edge zip manually (there is no API for this).
 
 ---
 

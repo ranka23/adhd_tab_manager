@@ -73,8 +73,11 @@ const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 // Firefox-specific manifest additions
 manifest.browser_specific_settings = {
   gecko: {
-    // Stable ID so saved data survives updates. Replace before publishing to AMO.
-    id: 'adhd-tab-manager@example.com',
+    // Stable ID so saved data survives updates. AMO (addons-linter) accepts
+    // only two id formats: a UUID or `name@domain` (email-style) — a URL or
+    // reverse-DNS string is REJECTED. This ties the id to the GitHub project
+    // (owner ranka23 → ranka23.github.io is their GitHub Pages domain).
+    id: 'adhd-tab-manager@ranka23.github.io',
     strict_min_version: '121.0',
   },
 };

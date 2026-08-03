@@ -495,3 +495,26 @@ New lasting e2e script `scripts/e2e/donate-smoke.mjs` drives the live Chrome (CD
 - **README `💜 Donate` section** now lists the two public wallet addresses directly (ETH `0x907D…121A`, SOL `H9kw…Szyo`) so users can donate without opening the app.
 - **Repo renamed** `adhd-tab-manager` → **`adhd_tab_manager`** (GitHub API; old URL redirects). All in-repo references updated: `src/shared/constants.ts` (`SOURCE_URL`), `scripts/e2e/donate-smoke.mjs` (×2), `docs/manual-test-plan.md` (×2), `README.md` (Contributing). Git remote updated to `https://github.com/ranka23/adhd_tab_manager.git`.
 - Verification: lint 0 · tests 280/280 · build:all + build:safari clean · lint:firefox 0 errors · chrome-e2e 50/50 · manual-test 78/78 · sidepanel-smoke 15/15 · multiwindow-smoke 9/9 · donate-smoke 15/15 · diagnostics 0.
+
+## 21. Final store packaging — gecko id fixed, Safari wrapper generated (added 2026-08-03)
+
+- **Firefox AMO gecko id is now real**: `adhd-tab-manager@ranka23.github.io` in
+  `scripts/build-firefox.mjs` + `dist-firefox/`. Tested: AMO rejects URLs and
+  reverse-DNS strings (`dev.ranka23.adhd-tab-manager` → 3 `JSON_INVALID` errors),
+  accepts only UUID or `name@domain` — so the GitHub URL cannot be used as the
+  id; the email-style id ties the add-on to the owner's GitHub Pages domain.
+  `pnpm lint:firefox` → 0 errors (2 benign warnings, 1 notice).
+- **Safari packaging done as far as possible without the user**: ran
+  `safari-web-extension-converter` (via `DEVELOPER_DIR=/Applications/Xcode.app/...`)
+  on `dist-safari/` → Xcode wrapper at `artifacts/release/safari/ADHD Tab Manager/`
+  (macOS + iOS targets, bundle id `dev.ranka23.adhd-tab-manager`); unsigned macOS
+  Release build succeeded → `artifacts/release/safari/build/ADHD Tab Manager.app`
+  (extension appex verified: mv3, popup surface, no side_panel). Only signing +
+  archive remain — requires the user's Apple Developer account (see
+  `artifacts/release/store-listing-safari.md`).
+- **All four store zips regenerated** with the final manifests:
+  `artifacts/release/zips/adhd-tab-manager-{chrome,edge,firefox,safari}-1.0.0.zip`.
+  Firefox zip verified to contain the new gecko id; manifest at zip root; no
+  `.DS_Store`; Safari zip carries no `side_panel` key.
+- Docs updated: `store-listing-firefox.md` (id resolved section), `RELEASE-NOTES.md`
+  (submission status + safe zip command without `rm -rf`).

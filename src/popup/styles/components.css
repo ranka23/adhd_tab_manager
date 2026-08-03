@@ -1463,6 +1463,8 @@
 /* Modal */
 .donate-dialog {
   max-width: 320px;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .donate-dialog__hero {
@@ -1471,58 +1473,124 @@
   padding: 18px 16px 0;
 }
 
+.donate-dialog__coffee {
+  margin: 0 auto 8px;
+  display: block;
+}
+
 .donate-dialog__title {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 6px;
+  margin: 0 0 4px;
+  text-align: center;
 }
 
 .donate-dialog__message {
   font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  margin: 0 0 14px;
-}
-
-.donate-dialog__amounts {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.donate-dialog__amount {
-  padding: 9px 0;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 13px;
   font-weight: 600;
+  line-height: 1.5;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  text-align: center;
+}
+
+.donate-dialog__body {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+.donate-dialog__wallets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Wallet block (from SideRouter) */
+.donate-wallet {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--bg-primary);
+}
+
+.donate-wallet__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.donate-wallet__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.donate-wallet__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.donate-wallet__qr {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.donate-wallet__qr-img {
+  width: 140px;
+  height: 140px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+}
+
+.donate-wallet__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.donate-wallet__address {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  padding: 4px 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.donate-dialog__copy {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px 8px;
   cursor: pointer;
+  font-size: 12px;
   font-family: inherit;
+  color: var(--text-secondary);
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.donate-dialog__amount:hover {
+.donate-dialog__copy:hover {
+  background: var(--hover-tint);
   border-color: var(--accent-color);
   color: var(--accent-color);
 }
 
-.donate-dialog__amount--selected {
-  background: var(--accent-soft, rgba(99, 102, 241, 0.12));
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-}
-
-.donate-dialog__cta {
-  background: linear-gradient(135deg, #f472b6, #8b5cf6);
-  border: none;
-}
-
-.donate-dialog__cta:hover {
-  filter: brightness(1.08);
+.donate-dialog__copy:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
 .donate-dialog__footer {
@@ -1530,7 +1598,7 @@
   justify-content: center;
   align-items: center;
   gap: 4px;
-  padding: 0 16px 14px;
+  padding: 14px 16px;
   font-size: 11px;
   color: var(--text-muted);
 }
@@ -1538,12 +1606,55 @@
 .donate-dialog__footer a {
   color: var(--accent-color);
   text-decoration: none;
+  font-weight: 600;
 }
 
 .donate-dialog__footer a:hover {
   text-decoration: underline;
 }
 
-.donate-dialog__opensource {
+/* ═══════════════════════════════════════════════════════
+ * FEEDBACK CARD (just above the Donate section on Home)
+ * ═══════════════════════════════════════════════════════ */
+
+.feedback-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feedback-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.feedback-card__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.feedback-card__text {
+  min-width: 0;
+}
+
+.feedback-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.feedback-card__subtitle {
+  font-size: 12px;
   color: var(--text-muted);
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+
+.feedback-card__button {
+  width: 100%;
+  justify-content: center;
+  text-decoration: none;
+  text-align: center;
 }

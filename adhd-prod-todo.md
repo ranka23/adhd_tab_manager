@@ -446,3 +446,44 @@ SideRouter donation assets were requested but **do not exist anywhere on this ma
 - `node scripts/e2e/sidepanel-smoke.mjs` → **15/15** (new check: `openPanelOnActionClick === true`).
 - `node scripts/e2e/multiwindow-smoke.mjs` → **9/9**.
 - Real-browser (Chrome for Testing :9222): donate card + modal live-verified; logo margins pixel-verified; panel behavior probe verified.
+
+## 19. GitHub Publishing Batch — SideRouter donations, feedback section, README, repo push (added 2026-08-03)
+
+### 19.1 SideRouter donation implementation (replaces the placeholder) 💜
+
+**Found the SideRouter project** at `/Users/user/code/web_apps/side_router` (git repo, remote `https://github.com/ranka23/side-router.git`). Its donation feature is a **crypto modal**: `main.html` donate modal + `src/lib/settings.js` (`walletAddresses`, `renderDonateQrCodes`, `copyDonateAddress`) + `src/styles.css` `.modal-donate` block + QR images in `media/`.
+
+Ported into the extension:
+- **Real public addresses** (from `settings.js`): ETH `0x907DB6Ad294bD6B9adAE4C2340d34883E32F121A`, SOL `H9kw2HG3eik5uKYoULHuzohoY7gCi1Jfqk38ppn1Szyo` (USDC/USDT → the ETH address).
+- **QR images copied** `side_router/media/{eth,sol}-address.jpg` → `public/donate/` (bundled into all dist targets; verified in dist/, dist-firefox/, dist-safari/).
+- **`DonateCard` rewritten**: “Support the Project” card keeps the a11y modal pattern (focus trap, Escape, overlay click, focus restore) but the modal is SideRouter's — “Buy me a Coffee!” hero (coffee-mug SVG), “Your donations help me build better software.”, “We accept Ethereum, Solana, USDC and USDT…”, **ETH + SOL wallet cards with QR images + copy buttons** (inline “✓ Copied” feedback, clipboard via `navigator.clipboard`), footer “Open Source — Source Code” → `SOURCE_URL`.
+- **Constants**: `DONATION_URL`/`DONATION_AMOUNTS` removed; `DONATION_ETH_ADDRESS`, `DONATION_SOL_ADDRESS`, `DONATION_QR_ETH`, `DONATION_QR_SOL`, `SOURCE_URL = https://github.com/ranka23/adhd-tab-manager`, `ISSUES_URL` added.
+- **Fixed a latent styling bug**: the old card used `btn-primary` (single dash); the design system is `btn--primary`/`btn--secondary` — the Donate CTA was unstyled. Both cards now use the correct classes.
+- **Removed `loading="lazy"`** from the QR `<img>`s — lazy loading delayed their render inside the modal (caught by the real-browser smoke; now eager).
+
+### 19.2 “Request a Feature or Report a Bug” section 📣
+
+- New **`FeedbackCard`** (`src/popup/components/FeedbackCard.tsx`) — sits **just above** the Donate section on the Home tab. CTA “Open GitHub Issues” → `ISSUES_URL` (`https://github.com/ranka23/adhd-tab-manager/issues`), `target=_blank` + `rel=noreferrer`, click opens via `browser.tabs.create` with `preventDefault` (no double-open).
+
+### 19.3 Real-browser verification — new `donate-smoke.mjs` (15/15)
+
+New lasting e2e script `scripts/e2e/donate-smoke.mjs` drives the live Chrome (CDP on :9222): both cards render + order (Feedback above Donate), issues CTA opens a new tab at the Issues page, modal opens, both wallets + addresses + QR images loaded (ETH 749px / SOL 864px), copy buttons write the real addresses, Escape closes, no horizontal overflow at 320/400/720px. **15/15.**
+
+### 19.4 GitHub publishing
+
+- Created public repo **`ranka23/adhd-tab-manager`** via the GitHub API (repo-scoped token from the OS keychain; `gh` CLI not installed).
+- Added remote + pushed `main`.
+- **README.md** rewritten in full detail (features, browser support matrix, store installs, dev setup, real-browser harnesses, structure, design principles, privacy, contributing, donate, license).
+- `docs/manual-test-plan.md` §15 rewritten (crypto modal) + new §15b (feedback) + §16 release gate updated.
+
+### 19.5 Verification (all green)
+
+- `pnpm lint` clean · `pnpm test` **280/280** (274 + 7 DonateCard + 4 FeedbackCard + Header test updates) · `pnpm build:all` clean · `pnpm build:safari` clean · `pnpm lint:firefox` 0 errors (2 benign warnings, 1 notice) · project diagnostics 0.
+- `node scripts/e2e/chrome-e2e.mjs` → **50/50** · `MANUAL_TEST_SLOW=1 node scripts/e2e/manual-test.mjs` → **78/78** · `sidepanel-smoke.mjs` → **15/15** · `multiwindow-smoke.mjs` → **9/9** · `donate-smoke.mjs` → **15/15**.
+- Real-browser (Chrome for Testing :9222): Home tab shows Feedback → Donate cards; modal + QR + copy verified end-to-end.
+
+### 19.6 Remaining pre-submission (user action)
+
+- Replace the AMO `gecko.id` (`adhd-tab-manager@example.com`) with a real reverse-domain ID in `dist-firefox/manifest.json` before submitting to Firefox AMO.
+- Safari packaging still needs `safari-web-extension-packager` (≈1–2 days, no code changes).
+- Store screenshots can be captured from `artifacts/*.png`.

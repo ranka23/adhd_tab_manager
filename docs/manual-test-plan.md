@@ -290,17 +290,41 @@ Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). The toolbar but
 
 ## 15. Donations (Home tab) 💜
 
+The Donate card is the **last** section on the Home tab. It opens a
+**SideRouter-style crypto donation modal**: a "Buy me a Coffee!" hero, the
+**Ethereum** and **Solana** wallet addresses with their **QR-code images** and
+one-tap **copy** buttons (USDC/USDT go to the Ethereum address), and an
+open-source footer link. QR images bundle from `public/donate/`;
+addresses live in `src/shared/constants.ts` (`DONATION_ETH_ADDRESS`,
+`DONATION_SOL_ADDRESS`, `SOURCE_URL`).
+
 | # | Test | Steps | Expected | Type |
 |---|---|---|---|---|
-| 15.1 | Card placement | Open Home tab | “Support the Project” card is the **last** section, after Quick Actions | 🟢 |
-| 15.2 | Open modal | Click “Buy me a coffee” | Modal opens: title, message, 4 amount chips ($1/$3/$5/$10), Donate CTA, GitHub footer link | 🟢 |
-| 15.3 | Amount select | Click a chip | Chip highlights; CTA label updates (e.g. “Donate $10”) | 🟢 |
-| 15.4 | Donate action | Select $10 → Donate | A new tab opens with the donation URL (`DONATION_URL` from `src/shared/constants.ts`, `?amount=10` for Ko-fi/BMC); modal closes | 🔴 |
-| 15.5 | Cancel / Escape | Open modal → Cancel (or Esc) | Modal closes; focus returns to the card button; nothing opens | 🟢 |
-| 15.6 | Overlay click | Open modal → click the dark overlay | Modal closes; clicking INSIDE the dialog does NOT close it | ⚠️ |
-| 15.7 | Focus trap | Tab through the modal | Focus stays inside the dialog until dismissed | ⚠️ |
-| 15.8 | Open-source link | Open modal → “View source on GitHub” | Opens `SOURCE_URL` in a new tab (`target=_blank`, `rel=noreferrer`) | 🟢 |
-| 15.9 | Responsive | Repeat at 320px/400px | Card + modal fit; no overflow | 📱 |
+| 15.1 | Card placement | Open Home tab | “Support the Project” card is the **last** section, after Quick Actions and the Feedback card | 🟢 |
+| 15.2 | Open modal | Click “❤️ Donate” | Modal opens: “Buy me a Coffee!” hero, subtitle, ETH + SOL wallet cards, footer “Open Source — Source Code” link | 🟢 |
+| 15.3 | Wallet details | Read the modal | ETH name + `0x907DB6…F121A` address + QR image; SOL name + `H9kw2H…Szyo` address + QR image | 🔴 |
+| 15.4 | QR images | Check both images | Both QR images render (ETH 749px, SOL 864px source); not broken, not blank | 🟢 |
+| 15.5 | Copy ETH | Click the ETH 📋 button | Clipboard contains the Ethereum address; button briefly shows “✓ Copied” | 🔴 |
+| 15.6 | Copy SOL | Click the SOL 📋 button | Clipboard contains the Solana address; button briefly shows “✓ Copied” | 🔴 |
+| 15.7 | Cancel / Escape | Open modal → Esc | Modal closes; focus returns to the card button; nothing opens | 🟢 |
+| 15.8 | Overlay click | Open modal → click the dark overlay | Modal closes; clicking INSIDE the dialog does NOT close it | ⚠️ |
+| 15.9 | Focus trap | Tab through the modal | Focus stays inside the dialog until dismissed | ⚠️ |
+| 15.10 | Open-source link | Open modal → “Source Code” | Opens `https://github.com/ranka23/adhd-tab-manager` in a new tab (`target=_blank`, `rel=noreferrer`) | 🟢 |
+| 15.11 | Responsive | Repeat at 320px/400px | Card + modal fit; no overflow; modal scrolls internally if short | 📱 |
+
+---
+
+## 15b. Request a Feature / Report a Bug (Home tab) 📣
+
+Sits **just above** the Donate card. Links to the GitHub Issues page of the
+open-source repository.
+
+| # | Test | Steps | Expected | Type |
+|---|---|---|---|---|
+| 15b.1 | Placement | Open Home tab | “Request a Feature or Report a Bug” card is directly ABOVE the Donate card | 🟢 |
+| 15b.2 | Link target | Inspect the CTA | Points to `https://github.com/ranka23/adhd-tab-manager/issues` with `target=_blank` + `rel=noreferrer` | 🔴 |
+| 15b.3 | Click | Click “Open GitHub Issues” | Exactly one new tab opens at the Issues page (no double-open) | 🟢 |
+| 15b.4 | Responsive | Repeat at 320px/400px | Card fits; no overflow | 📱 |
 
 ---
 
@@ -309,7 +333,7 @@ Chrome 114+ (`sidePanel` permission, `side_panel.default_path`). The toolbar but
 Before tagging v1.0.0:
 
 - [x] `pnpm lint` → 0 problems
-- [x] `pnpm test` → all pass (274)
+- [x] `pnpm test` → all pass (280)
 - [x] `pnpm build:all` → clean (dist/ + dist-firefox/)
 - [x] `pnpm build:safari` → clean (dist-safari/, popup surface, no side panel)
 - [x] `pnpm lint:firefox` → 0 errors
@@ -317,10 +341,11 @@ Before tagging v1.0.0:
 - [x] `node scripts/e2e/manual-test.mjs` → 78/78 (incl. `MANUAL_TEST_SLOW=1`)
 - [x] `node scripts/e2e/sidepanel-smoke.mjs` → 15/15
 - [x] `node scripts/e2e/multiwindow-smoke.mjs` → 9/9
+- [x] `node scripts/e2e/donate-smoke.mjs` → 15/15 (Home donate + feedback, real browser)
 - [x] Sections 1–12 machine-verified (all 🔴 items green)
-- [ ] Section 13 Firefox sidebar + §14 side-panel default + §15 donations — human pass required
-- [ ] **Pre-submission:** set real `DONATION_URL` / `SOURCE_URL` (`src/shared/constants.ts`) and the real AMO `gecko.id` (`dist-firefox/manifest.json`)
-- [x] `git status` clean; version bumped; README updated
+- [ ] Section 13 Firefox sidebar + §14 side-panel default + §15/§15b donations/feedback — human pass required
+- [x] **Pre-submission:** real `SOURCE_URL`/`ISSUES_URL` set (`src/shared/constants.ts`); real wallet addresses + QR assets in place; AMO `gecko.id` (`dist-firefox/manifest.json`) still needs your real reverse-domain ID
+- [x] `git status` clean; version bumped; README updated; pushed to GitHub
 - [ ] (Optional) Tag `v1.0.0`
 
 ---

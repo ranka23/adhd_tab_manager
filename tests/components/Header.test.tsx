@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Header } from '../../src/popup/components/Header';
+import { mocks } from '../setup';
 
 /** Local mirror of the component's props (interface is not exported). */
 interface HeaderProps {
@@ -42,10 +43,19 @@ const renderHeader = (partial: {
 };
 
 describe('Header', () => {
-  it('renders the app title with the brain icon fallback (no chrome.runtime in jsdom)', () => {
+  it('renders the app title with the logo image (chrome.runtime.getURL available)', () => {
     renderHeader();
     expect(screen.getByText('ADHD Tabs')).toBeInTheDocument();
+    const logo = screen.getByAltText('');
+    expect(logo).toHaveAttribute('src', 'chrome-extension://test/public/icons/icon48.png');
+  });
+
+  it('falls back to the brain emoji when chrome.runtime.getURL is unavailable', () => {
+    const original = mocks.runtime.getURL;
+    delete (mocks.runtime as { getURL?: unknown }).getURL;
+    renderHeader();
     expect(screen.getByLabelText('brain')).toHaveTextContent('🧠');
+    (mocks.runtime as { getURL?: unknown }).getURL = original;
   });
 
   it('shows the inactive focus toggle and calls onToggleFocus when clicked', () => {

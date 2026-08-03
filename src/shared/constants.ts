@@ -101,21 +101,26 @@ export const MAX_SESSIONS = 50;
  * DONATIONS & OPEN SOURCE
  * ═══════════════════════════════════════════════════════ */
 
-/**
- * Where the "Donate" button points. ADHD Tab Manager is free and open source;
- * set this to your real donation page (Ko-fi / Buy Me a Coffee / GitHub
- * Sponsors / Stripe) before submitting to the stores.
- */
-export const DONATION_URL = 'https://ko-fi.com/adhd-tab-manager';
+/** Ethereum wallet address for donations (same as the SideRouter project). */
+export const DONATION_ETH_ADDRESS = '0x907DB6Ad294bD6B9adAE4C2340d34883E32F121A';
 
-/** Preset donation amounts shown as chips in the donation modal (USD). */
-export const DONATION_AMOUNTS = [1, 3, 5, 10] as const;
+/** Solana wallet address for donations (same as the SideRouter project). */
+export const DONATION_SOL_ADDRESS = 'H9kw2HG3eik5uKYoULHuzohoY7gCi1Jfqk38ppn1Szyo';
+
+/** Path (relative to the extension root) of the ETH wallet QR code image. */
+export const DONATION_QR_ETH = 'donate/eth-address.jpg';
+
+/** Path (relative to the extension root) of the SOL wallet QR code image. */
+export const DONATION_QR_SOL = 'donate/sol-address.jpg';
 
 /**
  * The open-source repository page shown in the donation modal footer.
- * Replace with the real repository URL once it is published.
+ * ADHD Tab Manager is free and open source — donations help keep it alive.
  */
-export const SOURCE_URL = 'https://github.com/adhd-tab-manager/adhd-tab-manager';
+export const SOURCE_URL = 'https://github.com/ranka23/adhd-tab-manager';
+
+/** GitHub Issues page — used by the "Request New Feature or Report a Bug" card. */
+export const ISSUES_URL = `${SOURCE_URL}/issues`;
 
 /* ═══════════════════════════════════════════════════════
  * DEBUG LOGGING & STORAGE VERSION

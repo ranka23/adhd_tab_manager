@@ -1,71 +1,138 @@
 # 🧠 ADHD Tab Manager
 
-A Chrome Extension designed specifically for ADHD brains — minimal clutter, one-action-at-a-time, dopamine-friendly tab management.
+> A browser extension designed specifically for ADHD brains — minimal clutter,
+> one action at a time, dopamine-friendly tab management. Free, open source,
+> and donation-supported. 💜
 
-## Features
+**ADHD Tab Manager** helps you regain focus when your browser is a battlefield:
+one click hides every tab behind a calm focus screen, a Pomodoro timer keeps
+you on a rhythm, distracting sites get quietly blocked, and your tab sessions
+are always one click away from being saved and restored — even across multiple
+windows.
+
+Available for **Chrome**, **Edge**, **Firefox** and **Safari**. The side panel
+is the default surface on Chrome/Edge/Firefox (a persistent, resizable panel —
+no floating popup); Safari uses the classic toolbar popup.
+
+---
+
+## ✨ Features
 
 ### 🧘 Focus Mode
-- One click to start focusing
-- Closes distractions and blocks distracting sites
-- Calming visual feedback with elapsed time
-- Gentle end-of-focus celebration
+- One click to start focusing — every open tab is hidden behind a calm focus screen
+- Distracting sites are blocked with a gentle interstitial instead of a harsh block page
+- Distractions-avoided counter for dopamine hits
+- A "distractions avoided" stat and an end-of-focus summary
 
 ### 🍅 Pomodoro Timer
-- Beautiful circular SVG timer
-- Customizable work/break durations
-- Streak counter for motivation
-- Gentle audio chime on completion
+- Beautiful circular SVG timer with start / pause / resume / reset / skip
+- Customizable work / short-break / long-break durations (with validation)
+- A **streak counter** that tracks real consecutive days
+- Gentle audio chime + system notification when a phase completes — **even with
+  the popup/panel closed** (the service worker owns the countdown)
+- 4 pomodoros → long break, automatically
 
 ### 💾 Session Saver
-- Save current tabs as named sessions
-- **With multiple windows open, the save dialog asks which window(s) to snapshot** (e.g. “Window 2 only” or “Window 1 + 3”) — it never silently merges every window into one session
-- Restore sessions with one click
-- Auto-saves every 5 minutes
-- Undo-close for accidentally closed tabs (restores into the original window)
+- Save your open tabs as a named session (with icon + smart suggestions)
+- **Multi-window aware**: with several windows open, the save dialog asks
+  *which* window(s) to snapshot — "Window 1 only", "Window 2 + 3", etc. It
+  never silently merges every window into one session
+- Restore a session (pinned tabs restore pinned, order preserved) with one click
+- Undo-close history (max 20) restores accidentally closed tabs — **into their
+  original window and index**
+- Auto-saves every 5 minutes as a safety net
 
 ### 🛡️ Distraction Blocker
-- Pre-loaded with common distracting sites
-- Add/remove sites easily
-- Calm redirect page when blocked site is accessed
-- "Distractions avoided" counter for dopamine hits
+- Pre-loaded with common distracting sites (reddit, youtube, twitter, …)
+- Add / remove sites; normalized input (`HTTPS://Twitter.Com ` → `twitter.com`)
+- Duplicate and invalid input rejected inline
+- Works in the background — a blocked site redirects to the interstitial even
+  when the extension UI is closed
+- Toggle the whole blocker on/off with one switch
 
 ### 🪟 Multi-Window & Live Data
-- **Live data**: every surface (popup, side panel) updates itself the moment tabs or windows change — create/close a tab, open a new window, or change state in the other surface and the UI is instantly current (no refresh, no reopen)
-- **Tabs are grouped by window** in the Tabs view (“Window 1 / Window 2”, focused window marked)
-- **Close Window** closes a single window's non-pinned tabs; **Close All** is window-aware with a per-window breakdown in the confirm dialog
+- **Live data everywhere**: every surface (side panel, popup) updates itself
+  the instant tabs or windows change — close a tab, open a window, or change
+  state in the other surface and the UI is instantly current. No refresh,
+  no reopen
+- **Tabs are grouped by window** in the Tabs view ("Window 1 / Window 2", the
+  focused window marked) — tabs belong to their window
+- **Close Window** closes a single window's non-pinned tabs (with a per-window
+  picker when several windows are open); **Close All** is window-aware with a
+  per-window breakdown in the confirm dialog
 - Undo-close restores tabs into their original window
 
 ### 📌 Side Panel (default surface — Chrome / Edge / Firefox)
-- **The toolbar button opens the side panel directly** — no floating popup (Chrome/Edge `sidePanel` + `setPanelBehavior({ openPanelOnActionClick: true })`, Firefox `sidebar_action`)
-- Same features as the popup in a persistent, resizable surface; theme and state stay in sync across surfaces
-- The Open-Tabs list fills the panel height and scrolls internally
-- **Safari** (no side panel API) keeps the classic toolbar popup — `pnpm build:safari` → `dist-safari/`
+- **The toolbar button opens the side panel directly** — no floating popup
+  (`sidePanel` + `setPanelBehavior({ openPanelOnActionClick: true })` on
+  Chromium, `sidebar_action` on Firefox)
+- Same features as the popup in a persistent, resizable surface; theme and
+  state stay in sync across surfaces
+- The open-tabs list fills the panel height and scrolls internally (no page
+  scroll, no horizontal overflow)
+- **Safari** (no side panel API) keeps the classic toolbar popup —
+  `pnpm build:safari` → `dist-safari/`
+
+### 🏠 Home Tab
+- Rotating **Tao Te Ching quotes** — each one cites its chapter and verse
+  (e.g. *"— Tao Te Ching, Ch. 8, v. 1"*)
+- Daily progress stats: focus minutes, sessions saved, distractions blocked
+- Quick Actions: close-all (with undo), close window, undo-close
+- **Request a Feature or Report a Bug** card → GitHub Issues
+- **Donate** card (last section) → crypto donation modal
 
 ### 💜 Donations & Open Source
-- Free and open source (MIT)
-- A **Donate** card is the last section on the Home tab — opens a donation modal with preset amounts
-- The donation target is configurable via `DONATION_URL` in `src/shared/constants.ts` (set it to your Ko-fi / Buy Me a Coffee / GitHub Sponsors page before submitting)
-- The modal footer links to the open-source repository (`SOURCE_URL`, same constants file)
+- Free and open source (MIT) — no data collection, ever
+- **Donate with crypto**: the donation modal shows the **Ethereum** and
+  **Solana** wallet addresses with their QR codes and one-tap copy buttons
+  (USDC/USDT go to the Ethereum address). The QR images are the actual wallet
+  QR codes from the [SideRouter](https://github.com/ranka23/side-router) project
+- The modal footer links to this repository — open source, forever
 
-### 📊 Daily Motivation
-- Rotating **Tao Te Ching quotes** — each one cites its chapter and verse (e.g. “— Tao Te Ching, Ch. 8, v. 1”)
-- Daily progress stats
-- Focus time tracking
-- Encouraging messages based on activity
+---
 
-## Design Principles
+## 📦 Browser Support
 
-This extension follows ADHD-specific design principles:
+| Browser | Artifact | Notes |
+|---|---|---|
+| **Chrome** | `dist/` | Manifest V3, service worker, side panel default surface |
+| **Edge** | `dist/` | Same Chromium build as Chrome |
+| **Firefox** | `dist-firefox/` | Manifest V3 event-page background, `sidebar_action` (open on install) |
+| **Safari** | `dist-safari/` | Classic popup surface (Safari has no side panel API); packaged with `safari-web-extension-packager` |
 
-- **Calm color palette**: Soft blues, muted greens, warm neutrals
-- **One primary action**: Each screen has ONE clear thing to do
-- **Dopamine rewards**: Celebrate small wins with gentle animations
-- **Minimal text**: Use icons and short labels
-- **Forgiving UX**: "Undo" everything, no destructive actions without confirmation
-- **Rounded, soft UI**: Large border-radius, soft shadows, no sharp edges
-- **Progress indicators**: Show progress bars, streaks, and achievements
+---
 
-## Development
+## 🚀 Installation (from the stores — coming soon)
+
+The extension is being submitted to the Chrome Web Store, Edge Add-ons,
+Firefox AMO and the App Store. Until then, load it as an unpacked extension:
+
+### Chrome / Edge
+1. Run `pnpm build` (or `pnpm build:all`)
+2. Open `chrome://extensions/` (or `edge://extensions/`)
+3. Enable **Developer mode**
+4. Click **Load unpacked** → select the `dist/` directory
+5. Click the toolbar icon → the **side panel opens** (the default surface)
+
+> 💡 **Toolbar click not opening the side panel?** If you loaded the extension
+> *before* the side-panel change, Chrome caches the old action config —
+> **Remove the extension and click "Load unpacked" again** (or use a fresh
+> profile). The current build opens the panel natively via
+> `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`.
+
+### Firefox
+1. Run `pnpm build:firefox`
+2. Open `about:debugging#/runtime/this-firefox`
+3. Click **Load Temporary Add-on** → select `dist-firefox/manifest.json`
+4. The **sidebar opens automatically** on install; the toolbar button toggles it
+
+### Safari
+1. Run `pnpm build:safari`
+2. Wrap `dist-safari/` with `safari-web-extension-packager` (Xcode)
+
+---
+
+## 🛠️ Development
 
 ### Prerequisites
 - Node.js 18+
@@ -74,101 +141,128 @@ This extension follows ADHD-specific design principles:
 ### Setup
 
 ```bash
-# Build all targets: dist/ (Chrome/Edge) + dist-firefox/ + dist-safari/
+pnpm install
+
+# Build all targets: dist/ (Chrome/Edge) + dist-firefox/ (+ dist-safari/ with the Safari target)
 pnpm build:all
 pnpm build:safari   # adds dist-safari/ (popup surface, no side panel)
 
-# Run unit/integration tests (274)
+# Unit + integration tests (280)
 pnpm test
 
-# Lint
+# Lint (ESLint + TypeScript strict)
 pnpm lint
 
 # Firefox add-on lint (web-ext)
 pnpm lint:firefox
 
-# Format
+# Format (Prettier)
 pnpm format
 ```
 
-### Real-browser verification
+### Real-browser verification (Chrome for Testing)
 
 ```bash
 # Automated Chrome e2e (50 checks, headless, temp profile)
 node scripts/e2e/chrome-e2e.mjs
 
-# Full manual-test matrix (78 checks, real clicks/tabs/windows/storage/SW)
+# Full manual-test matrix (78 checks — real clicks/tabs/windows/storage/SW)
 node scripts/e2e/manual-test.mjs
 
 # + the ~60s service-worker tick test (timer completes with popup closed)
 MANUAL_TEST_SLOW=1 node scripts/e2e/manual-test.mjs
 
-# Side-panel (15 checks) + multi-window (9 checks) smoke suites
+# Side-panel (15) + multi-window (9) smoke suites
 node scripts/e2e/sidepanel-smoke.mjs
 node scripts/e2e/multiwindow-smoke.mjs
+
+# Home donation + feedback sections (15 checks — real browser)
+node scripts/e2e/donate-smoke.mjs
 
 # Interactive environment for MCP-driven / human testing (Chrome for Testing :9222)
 node scripts/e2e/start-test-env.mjs
 ```
 
-Results: `docs/manual-test-results.md`, `docs/manual-test-plan.md`, `adhd-prod-todo.md`.
+Results & plans: `docs/manual-test-results.md`, `docs/manual-test-plan.md`, `adhd-prod-todo.md`.
 
-### Loading the Extension
+### Manual test plan
 
-1. Run `pnpm build`
-2. Open `chrome://extensions/`
-3. Enable "Developer mode"
-4. Click "Load unpacked"
-5. Select the `dist/` directory
-6. Pin the extension and click the toolbar icon → the **side panel** opens (the default surface).
-   For Firefox use `about:debugging` → Load Temporary Add-on → `dist-firefox/manifest.json`
-   (the toolbar button opens the sidebar).
+A full human-verifiable test plan (sections 1–16, ~90 checks) lives in
+[`docs/manual-test-plan.md`](docs/manual-test-plan.md) — render, theme, focus
+mode, blocker, sessions, undo-close, Pomodoro, quick actions, export/import,
+responsive/mobile widths, Firefox parity, side panel and donations.
 
-> 💡 **Toolbar click not opening the side panel?** If you loaded the extension
-> *before* the side-panel change, Chrome caches the old action config —
-> **Remove the extension and click “Load unpacked” again** (or use a fresh
-> profile). The current build opens the panel natively on click via
-> `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`.
+---
 
-## Store listings
-
-| Store | Artifact | Notes |
-|---|---|---|
-| Chrome Web Store | `dist/` | ZIP `dist/`; MV3 service worker + side panel. Screenshots: popup & side panel. No special permissions beyond `tabs`/`storage`/`alarms`/`notifications`/`sidePanel`. |
-| Edge Add-ons | `dist/` | Same ZIP as Chrome; Edge accepts Chromium MV3 extensions. |
-| Firefox AMO | `dist-firefox/` | ZIP `dist-firefox/`; event-page background. **Replace `browser_specific_settings.gecko.id` (`adhd-tab-manager@example.com`) with your real reverse-domain ID before submitting.** |
-| Safari | `dist-safari/` | Requires the Safari Web Extension Converter/packager (`safari-web-extension-packager` or App Store Connect) — no code changes needed; the popup is the only surface. |
-
-Store copy: the extension collects **no data**; state lives entirely in local
-`chrome.storage`. Mention that in each store's privacy section. Donation link
-(Home tab → “Buy me a coffee”) is configurable in `src/shared/constants.ts`.
-
-## Tech Stack
+## 🧱 Tech Stack
 
 - **Language**: TypeScript (strictest config)
 - **UI**: React 18
 - **Build**: Vite + @crxjs/vite-plugin
-- **Testing**: Vitest
+- **Testing**: Vitest + @testing-library/react
 - **Linting**: ESLint + Prettier
-- **Storage**: chrome.storage.local
+- **Storage**: `chrome.storage.local` (all state stays on-device)
 - **Architecture**: Manifest V3
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 src/
-├── popup/          # React UI for the extension popup
-│   ├── components/ # Reusable UI components
-│   ├── hooks/      # Custom React hooks
-│   ├── services/   # Chrome API abstractions
-│   ├── types/      # TypeScript type definitions
-│   ├── utils/      # Helper functions and constants
-│   └── styles/     # CSS stylesheets
-├── sidepanel/      # Side panel entry — the DEFAULT surface on Chrome/Edge/Firefox
-├── background/     # Service worker (background scripts)
-└── shared/         # Constants shared between popup and background
+├── popup/            # React UI for the popup + side panel surfaces
+│   ├── components/   # Reusable UI components (FocusMode, PomodoroTimer,
+│   │                 #  SessionSaver, TabGroup, DonateCard, FeedbackCard, …)
+│   ├── hooks/        # Custom React hooks (useTabs, useSessions, useTimer, …)
+│   ├── services/     # Chrome API abstractions
+│   ├── types/        # TypeScript type definitions
+│   ├── utils/        # Helper functions
+│   └── styles/       # CSS stylesheets (design system, components, animations)
+├── sidepanel/        # Side panel entry — the DEFAULT surface on Chrome/Edge/Firefox
+├── background/       # Service worker (focus blocker, timer, auto-save, alarms)
+├── shared/           # Cross-surface constants, browser wrapper, storage keys
+public/
+├── icons/            # Extension icons (16/32/48/128) + the logo SVG
+└── donate/           # Wallet QR-code images (ETH + SOL)
+scripts/
+└── e2e/              # Real-browser harnesses (start-test-env, chrome-e2e,
+                      #  manual-test, sidepanel-smoke, multiwindow-smoke,
+                      #  donate-smoke, generate-icons)
 ```
 
-## License
+## 🧠 Design Principles
+
+ADHD-specific design decisions:
+
+- **Calm color palette** — soft blues, muted greens, warm neutrals
+- **One primary action** per screen
+- **Dopamine rewards** — celebrate small wins with gentle animations
+- **Minimal text** — icons and short labels
+- **Forgiving UX** — "Undo" everything; no destructive action without confirmation
+- **Rounded, soft UI** — large border-radius, soft shadows, no sharp edges
+- **Progress indicators** — progress bars, streaks, daily stats
+- **Reduced motion respected** — `prefers-reduced-motion` tones down animations
+- **Keyboard accessible** — visible focus rings, focus-trapped modals, Escape to close
+
+## 🔒 Privacy
+
+**ADHD Tab Manager collects no data.** Everything lives in your browser's
+local extension storage (`chrome.storage.local`) — sessions, settings, stats.
+Nothing is sent anywhere; the only network-bound action is when *you* click a
+link (GitHub Issues, the open-source repo). The background service worker
+redirects blocked sites to a local interstitial page — no remote calls.
+
+## 🤝 Contributing
+
+Found a bug or want a feature? Open an
+[issue](https://github.com/ranka23/adhd-tab-manager/issues) — every report
+helps make the extension better for everyone. PRs are welcome.
+
+## 💜 Donate
+
+ADHD Tab Manager is free and open source. If it helps you stay focused,
+consider a small donation — **Ethereum (ETH/USDC/USDT)** and **Solana (SOL)**
+are accepted via the **Donate** card on the Home tab (wallet QR codes + copy
+buttons). Every bit helps pay the bills and keep the project alive.
+
+## 📄 License
 
 MIT — free, open source, and donation-supported. 💜

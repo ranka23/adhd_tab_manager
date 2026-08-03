@@ -184,6 +184,8 @@ const chromeRuntime = {
     addListener: vi.fn(),
     removeListener: vi.fn(),
   },
+  /** Resolves bundled asset paths (used for donate QR images). */
+  getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
 };
 
 // Create a typed chrome object and attach to globalThis

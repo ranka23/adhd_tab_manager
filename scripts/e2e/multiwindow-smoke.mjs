@@ -115,7 +115,7 @@ console.log('\n=== Multi-window & live-data interactive smoke ===');
 await waitFor(`!!document.querySelector('.app-header') && document.querySelectorAll('.nav-tab').length === 5`, 'app header');
 const layout = await evalJs(`(() => {
   const actions = [...document.querySelectorAll('.header-actions > *')];
-  const themeIdx = actions.findIndex(b => b.classList.contains('theme-toggle') && (b.getAttribute('aria-label')||'').includes('dark mode'));
+  const themeIdx = actions.findIndex(b => b.classList.contains('theme-toggle') && /dark mode|light mode/.test(b.getAttribute('aria-label') || ''));
   const hasSpToggle = actions.some(b => b.classList.contains('side-panel-toggle'));
   const focusIdx = actions.findIndex(b => b.classList.contains('focus-toggle'));
   const logo = !!document.querySelector('.header-icon-img');

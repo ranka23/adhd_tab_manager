@@ -2,6 +2,7 @@
   "name": "adhd-tab-manager",
   "version": "1.0.0",
   "description": "A browser extension designed for ADHD brains — minimal clutter, one-action-at-a-time, dopamine-friendly tab management",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

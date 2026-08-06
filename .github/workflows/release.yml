@@ -87,11 +87,11 @@ jobs:
       - name: Sign & submit to AMO (listed = public review)
         if: ${{ env.AMO_JWT_ISSUER != '' }}
         run: |
-          pnpm exec web-ext sign \
+          pnpm exec web-ext build \
             --source-dir dist-firefox \
-            --api-key "$AMO_JWT_ISSUER" \
-            --api-secret "$AMO_JWT_SECRET" \
-            --channel listed
+            --artifacts-dir artifacts/amo \
+            --overwrite-dest
+          node scripts/release/submit-amo.mjs
 
       - name: Update AMO listing text (summary, description, links)
         if: ${{ env.AMO_ADDON_SLUG != '' }}

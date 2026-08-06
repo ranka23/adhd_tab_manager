@@ -66,7 +66,10 @@ jobs:
     name: Publish to Firefox AMO
     needs: package
     runs-on: ubuntu-latest
-    if: ${{ secrets.AMO_JWT_ISSUER != '' }}
+    env:
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+      AMO_ADDON_SLUG: ${{ secrets.AMO_ADDON_SLUG }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -82,9 +85,7 @@ jobs:
         run: pnpm build:all
 
       - name: Sign & submit to AMO (listed = public review)
-        env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        if: ${{ env.AMO_JWT_ISSUER != '' }}
         run: |
           pnpm exec web-ext sign \
             --source-dir dist-firefox \
@@ -93,18 +94,18 @@ jobs:
             --channel listed
 
       - name: Update AMO listing text (summary, description, links)
-        if: ${{ secrets.AMO_ADDON_SLUG != '' }}
-        env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
-          AMO_ADDON_SLUG: ${{ secrets.AMO_ADDON_SLUG }}
+        if: ${{ env.AMO_ADDON_SLUG != '' }}
         run: node scripts/release/update-amo-listing.mjs
 
   publish-chrome:
     name: Publish to Chrome Web Store
     needs: package
     runs-on: ubuntu-latest
-    if: ${{ secrets.CWS_CLIENT_ID != '' }}
+    env:
+      CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+      CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+      CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+      CWS_ITEM_ID: ${{ secrets.CWS_ITEM_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -122,9 +123,5 @@ jobs:
           node scripts/release/create-zips.mjs
 
       - name: Upload + publish to Chrome Web Store
-        env:
-          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
-          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
-          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
-          CWS_ITEM_ID: ${{ secrets.CWS_ITEM_ID }}
+        if: ${{ env.CWS_CLIENT_ID != '' }}
         run: node scripts/release/publish-chrome.mjs
